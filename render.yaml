@@ -7,6 +7,8 @@ services:
     startCommand: python server.py --host 0.0.0.0 --port $PORT
     healthCheckPath: /
     envVars:
+      - key: DUCKMINER_INVITE_CODE
+        sync: false
       - key: DUCKMINER_SECURE_COOKIE
         value: "1"
       - key: PYTHONUNBUFFERED

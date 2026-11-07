@@ -16,6 +16,8 @@ import webbrowser
 from datetime import datetime, timedelta, timezone
 from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from socket import timeout as SocketTimeout
+from urllib.parse import urlsplit
 
 ROOT = Path(__file__).resolve().parent
 DB = ROOT / 'data' / 'duckminer.sqlite3'
@@ -28,6 +30,8 @@ MISSION = {
     'weekly': [('machine', 3, 250), ('battery', 3, 200), ('crate', 2, 250)],
 }
 TZ = timezone(timedelta(hours=-3))
+SESSION_SECONDS = DAY
+HASH_SLOTS = threading.BoundedSemaphore(3)
 
 
 class Connection(sqlite3.Connection):
@@ -61,7 +65,14 @@ def initialize():
         CREATE TABLE IF NOT EXISTS requests(
           user_id INTEGER, key TEXT, PRIMARY KEY(user_id,key));
         CREATE TABLE IF NOT EXISTS attempts(ip TEXT PRIMARY KEY, start INTEGER, count INTEGER);
+        CREATE TABLE IF NOT EXISTS limits(key TEXT PRIMARY KEY, start INTEGER, count INTEGER);
         ''')
+        columns = {row['name'] for row in db.execute('PRAGMA table_info(sessions)')}
+        if 'csrf' not in columns:
+            db.execute("ALTER TABLE sessions ADD COLUMN csrf TEXT NOT NULL DEFAULT ''")
+        columns = {row['name'] for row in db.execute('PRAGMA table_info(requests)')}
+        if 'body_hash' not in columns:
+            db.execute("ALTER TABLE requests ADD COLUMN body_hash TEXT NOT NULL DEFAULT ''")
         now = int(time.time())
         db.execute('INSERT OR IGNORE INTO pool VALUES(1,?,?)', (now, now - now % 60))
 
@@ -308,8 +319,76 @@ def snapshot(db, uid):
             'user': next(u['name'] for u in users if u['id'] == uid)}
 
 
+def consume_limits(rules, now):
+    """Independent transaction so rejected attempts cannot roll back their counters."""
+    with connect() as db:
+        db.execute('BEGIN IMMEDIATE')
+        db.execute('DELETE FROM limits WHERE start < ?', (now - 3600,))
+        allowed = True
+        for key, maximum, duration in rules:
+            row = db.execute('SELECT start,count FROM limits WHERE key=?', (key,)).fetchone()
+            start, count = (row['start'], row['count']) if row and now-row['start'] < duration else (now, 0)
+            allowed = allowed and count < maximum
+            db.execute('INSERT OR REPLACE INTO limits VALUES(?,?,?)', (key, start, min(count+1, maximum+1)))
+        return allowed
+
+
+def invitation_valid(value):
+    expected = os.environ.get('DUCKMINER_INVITE_CODE', '')
+    return (len(expected) >= 16 and isinstance(value, str)
+            and hmac.compare_digest(value.encode(), expected.encode()))
+
+
+class LimitedServer(ThreadingHTTPServer):
+    """Bound sockets and threads, including clients that stop sending a request."""
+    daemon_threads = True
+    request_queue_size = 32
+
+    def __init__(self, *args, **kwargs):
+        self.slots = threading.BoundedSemaphore(24)
+        super().__init__(*args, **kwargs)
+
+    def process_request(self, request, client_address):
+        if not self.slots.acquire(blocking=False):
+            try:
+                request.settimeout(1)
+                request.sendall(b'HTTP/1.0 503 Service Unavailable\r\nConnection: close\r\nContent-Length: 0\r\n\r\n')
+            except OSError:
+                pass
+            finally:
+                self.shutdown_request(request)
+            return
+        try:
+            super().process_request(request, client_address)
+        except Exception:
+            self.slots.release()
+            raise
+
+    def process_request_thread(self, request, client_address):
+        try:
+            super().process_request_thread(request, client_address)
+        finally:
+            self.slots.release()
+
+
 class Handler(BaseHTTPRequestHandler):
     server_version = 'DuckMiner'
+    sys_version = ''
+
+    def setup(self):
+        super().setup()
+        self.connection.settimeout(10)
+
+    def end_headers(self):
+        self.send_header('X-Content-Type-Options', 'nosniff')
+        self.send_header('X-Frame-Options', 'DENY')
+        self.send_header('Referrer-Policy', 'same-origin')
+        self.send_header('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')
+        # The retained interface uses inline handlers. Scripts cannot connect to third parties.
+        self.send_header('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'")
+        if os.environ.get('DUCKMINER_SECURE_COOKIE') == '1':
+            self.send_header('Strict-Transport-Security', 'max-age=31536000')
+        super().end_headers()
 
     def log_message(self, *_):
         pass
@@ -333,74 +412,124 @@ class Handler(BaseHTTPRequestHandler):
         if self.path not in files:
             return self.reply(404, {'error': 'Página indisponível.'})
         name, mime = files[self.path]
-        body = (ROOT / 'public' / name).read_bytes()
+        try:
+            body = (ROOT / 'public' / name).read_bytes()
+        except OSError:
+            return self.reply(503, {'error': 'Arquivos do jogo ausentes. Confira a pasta public no GitHub.'})
+        if name == 'index.html' and os.environ.get('DUCKMINER_DEMO') == '1':
+            notice = '<div style="padding:12px;background:#713f12;color:white;font-weight:bold">Demonstração gratuita: contas e progresso podem ser apagados quando o serviço reiniciar. DCK fictício.</div>'
+            body = body.replace(b'<body>', b'<body>' + notice.encode())
         self.send_response(200)
         self.send_header('Content-Type', mime)
         self.send_header('Content-Length', str(len(body)))
         self.send_header('Cache-Control', 'no-store')
-        self.send_header('X-Content-Type-Options', 'nosniff')
-        self.send_header('X-Frame-Options', 'DENY')
         self.end_headers()
         self.wfile.write(body)
 
     def do_POST(self):
         origin = self.headers.get('Origin')
-        if origin and origin not in ('http://' + self.headers.get('Host', ''), 'https://' + self.headers.get('Host', '')):
+        host = self.headers.get('Host', '')
+        try:
+            parsed = urlsplit(origin) if origin else None
+        except ValueError:
             return self.reply(403, {'error': 'Origem inválida.'})
+        if (self.headers.get('Sec-Fetch-Site') == 'cross-site'
+                or (origin and (not parsed or parsed.scheme not in ('http', 'https') or parsed.netloc != host or parsed.path or parsed.query or parsed.fragment))):
+            return self.reply(403, {'error': 'Origem inválida.'})
+        if self.headers.get('Content-Type', '').split(';')[0].strip().lower() != 'application/json':
+            return self.reply(415, {'error': 'Use uma requisição JSON.'})
+        if self.headers.get('X-DuckMiner-Request') != '1':
+            return self.reply(403, {'error': 'Recarregue a página do jogo.'})
+        if self.headers.get('Transfer-Encoding'):
+            return self.reply(400, {'error': 'Formato de requisição inválido.'})
         self.api()
 
     def api(self):
         db = connect()
         try:
             data = {}
+            now = int(time.time())
+            network_key = hashlib.sha256(self.client_address[0].encode()).hexdigest()
+            # Do not trust a client-supplied X-Forwarded-For header. Account and
+            # session limits below isolate players even when Render shares a proxy IP.
+            if not consume_limits([('network:'+network_key, 3000, 60)], now):
+                return self.reply(429, {'error': 'Muitas requisições. Aguarde um minuto.'})
             if self.command == 'POST':
                 length = int(self.headers.get('Content-Length', 0))
                 if not 0 < length <= 4096:
                     raise ValueError('Pedido inválido.')
-                data = json.loads(self.rfile.read(length))
+                data = json.loads(self.rfile.read(length), parse_constant=lambda _: (_ for _ in ()).throw(ValueError()))
                 if not isinstance(data, dict):
                     raise ValueError('Pedido inválido.')
-            now = int(time.time())
-            db.execute('BEGIN IMMEDIATE')
-            advance(db, now)
             if self.path in ('/api/register', '/api/login') and self.command == 'POST':
                 name, password = data.get('name', ''), data.get('password', '')
+                # Count even malformed credentials and incorrect invitation codes.
+                account_key = hashlib.sha256(str(name).lower().encode()).hexdigest()
+                if not consume_limits([('auth-network:'+network_key, 100, 600),
+                                       ('auth-account:'+account_key, 10, 600)], now):
+                    return self.reply(429, {'error': 'Muitas tentativas. Aguarde dez minutos.'})
+                registering = self.path == '/api/register'
+                if registering and not invitation_valid(data.get('invite')):
+                    return self.reply(403, {'error': 'Cadastro restrito. Solicite um convite válido ao responsável pelo jogo.'})
                 if not isinstance(name, str) or not re.fullmatch(r'[a-zA-Z0-9_]{3,24}', name) or not isinstance(password, str) or not 10 <= len(password) <= 128:
                     raise ValueError('Use um nome com 3–24 letras, números ou _ e senha com 10–128 caracteres.')
                 name = name.lower()
-                attempt = db.execute('SELECT * FROM attempts WHERE ip=?', (self.client_address[0],)).fetchone()
-                attempts = attempt['count'] if attempt and now-attempt['start'] < 600 else 0
-                start = attempt['start'] if attempts else now
-                if attempts >= 30:
-                    db.commit()
-                    return self.reply(429, {'error': 'Muitas tentativas. Aguarde dez minutos.'})
-                db.execute('INSERT OR REPLACE INTO attempts VALUES(?,?,?)', (self.client_address[0], start, attempts+1))
                 user = db.execute('SELECT * FROM users WHERE name=?', (name,)).fetchone()
-                registering = self.path == '/api/register'
                 salt = user['salt'] if user else secrets.token_bytes(16)
-                hashed = hashlib.scrypt(password.encode(), salt=salt, n=16384, r=8, p=1)
+                if not HASH_SLOTS.acquire(blocking=False):
+                    return self.reply(429, {'error': 'Servidor ocupado. Aguarde alguns segundos.'})
+                try:
+                    hashed = hashlib.scrypt(password.encode(), salt=salt, n=16384, r=8, p=1)
+                finally:
+                    HASH_SLOTS.release()
                 if (registering and user) or (not registering and (not user or not hmac.compare_digest(hashed, user['password']))):
-                    db.commit()
                     return self.reply(400, {'error': 'Nome indisponível ou credenciais inválidas.'})
+                db.execute('BEGIN IMMEDIATE')
+                advance(db, now)
                 if registering:
+                    if db.execute('SELECT 1 FROM users WHERE name=?', (name,)).fetchone():
+                        db.rollback()
+                        return self.reply(400, {'error': 'Nome indisponível ou credenciais inválidas.'})
                     uid = db.execute('INSERT INTO users(name,salt,password,state) VALUES(?,?,?,?)', (name, salt, hashed, json.dumps(fresh()))).lastrowid
                 else:
                     uid = user['id']
                 token = secrets.token_urlsafe(32)
-                db.execute('INSERT INTO sessions VALUES(?,?,?)', (hashlib.sha256(token.encode()).hexdigest(), uid, now+7*DAY))
+                csrf = secrets.token_urlsafe(32)
+                db.execute('INSERT INTO sessions(token,user_id,expires,csrf) VALUES(?,?,?,?)', (hashlib.sha256(token.encode()).hexdigest(), uid, now+SESSION_SECONDS, csrf))
                 db.execute('DELETE FROM sessions WHERE expires<=?', (now,))
                 result = snapshot(db, uid)
+                result['csrf'] = csrf
                 db.commit()
                 secure = '; Secure' if os.environ.get('DUCKMINER_SECURE_COOKIE') == '1' else ''
-                return self.reply(200, result, f'duck_session={token}; HttpOnly; SameSite=Strict; Path=/; Max-Age={7*DAY}{secure}')
+                return self.reply(200, result, f'duck_session={token}; HttpOnly; SameSite=Strict; Path=/; Max-Age={SESSION_SECONDS}{secure}')
             cookie = SimpleCookie(self.headers.get('Cookie', ''))
             token = cookie['duck_session'].value if 'duck_session' in cookie else ''
             digest = hashlib.sha256(token.encode()).hexdigest()
-            session = db.execute('SELECT user_id FROM sessions WHERE token=? AND expires>?', (digest, now)).fetchone()
+            session = db.execute('SELECT user_id,csrf FROM sessions WHERE token=? AND expires>?', (digest, now)).fetchone()
             if not session:
                 db.commit()
                 return self.reply(401, {'error': 'Entre na sua conta.'})
             uid = session['user_id']
+            rules = [('session:'+digest, 120, 60)]
+            if self.command == 'POST':
+                rules.append(('action:'+str(uid), 30, 60))
+                csrf = self.headers.get('X-CSRF-Token', '')
+                if not session['csrf'] or not hmac.compare_digest(csrf.encode(), session['csrf'].encode()):
+                    return self.reply(403, {'error': 'Sessão desatualizada. Recarregue o jogo.'})
+            if not consume_limits(rules, now):
+                return self.reply(429, {'error': 'Muitas ações. Aguarde um minuto.'})
+            db.execute('BEGIN IMMEDIATE')
+            # Recheck after acquiring the write lock, so logout/revocation wins races.
+            session = db.execute('SELECT user_id,csrf FROM sessions WHERE token=? AND expires>?', (digest, now)).fetchone()
+            if not session:
+                db.rollback()
+                return self.reply(401, {'error': 'Entre na sua conta.'})
+            if not session['csrf']:
+                csrf = secrets.token_urlsafe(32)
+                db.execute('UPDATE sessions SET csrf=? WHERE token=?', (csrf, digest))
+            else:
+                csrf = session['csrf']
+            advance(db, now)
             message = None
             if self.path == '/api/logout' and self.command == 'POST':
                 db.execute('DELETE FROM sessions WHERE token=?', (digest,))
@@ -410,23 +539,31 @@ class Handler(BaseHTTPRequestHandler):
                 key = self.headers.get('Idempotency-Key', '')
                 if not re.fullmatch(r'[a-zA-Z0-9-]{16,80}', key):
                     raise ValueError('Identificador da operação inválido.')
-                exists = db.execute('SELECT 1 FROM requests WHERE user_id=? AND key=?', (uid, key)).fetchone()
+                body_hash = hashlib.sha256(json.dumps(data, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
+                exists = db.execute('SELECT body_hash FROM requests WHERE user_id=? AND key=?', (uid, key)).fetchone()
+                if exists and exists['body_hash'] != body_hash:
+                    db.rollback()
+                    return self.reply(409, {'error': 'Identificador já usado para outra operação.'})
                 if not exists:
                     s = json.loads(db.execute('SELECT state FROM users WHERE id=?', (uid,)).fetchone()[0])
                     message = act(s, data)
                     db.execute('UPDATE users SET state=? WHERE id=?', (json.dumps(s), uid))
-                    db.execute('INSERT INTO requests VALUES(?,?)', (uid, key))
+                    db.execute('INSERT INTO requests(user_id,key,body_hash) VALUES(?,?,?)', (uid, key, body_hash))
             elif self.path != '/api/state' or self.command != 'GET':
                 raise ValueError('Pedido indisponível.')
             result = snapshot(db, uid)
             result['message'] = message
+            result['csrf'] = csrf
             db.commit()
             self.reply(200, result)
-        except (ValueError, TypeError, KeyError, IndexError):
+        except (ValueError, TypeError, KeyError, IndexError, UnicodeError):
             db.rollback()
             self.reply(400, {'error': 'Operação inválida ou indisponível. Confira saldo, carga e requisitos.'})
-        except Exception:
+        except (SocketTimeout, ConnectionError):
             db.rollback()
+        except Exception as error:
+            db.rollback()
+            print('Falha na API:', type(error).__name__, flush=True)
             self.reply(500, {'error': 'Não foi possível concluir. Tente novamente.'})
         finally:
             db.close()
@@ -449,8 +586,10 @@ if __name__ == '__main__':
     parser.add_argument('--open', action='store_true', help='Abrir o jogo no navegador')
     args = parser.parse_args()
     initialize()
+    if len(os.environ.get('DUCKMINER_INVITE_CODE', '')) < 16:
+        print('Cadastro fechado: configure DUCKMINER_INVITE_CODE com pelo menos 16 caracteres para liberar convites.', flush=True)
     try:
-        http = ThreadingHTTPServer((args.host, args.port), Handler)
+        http = LimitedServer((args.host, args.port), Handler)
     except OSError as error:
         print(f'Nao foi possivel abrir a porta {args.port}: {error}', flush=True)
         print('Feche outro DuckMiner aberto ou use: python server.py --port 8001 --open', flush=True)

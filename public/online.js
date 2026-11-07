@@ -2,17 +2,22 @@ let poolState = {power: 0, elapsed: 0, reward: 10};
 let rankingState = [];
 let authenticated = false;
 let requestBusy = false;
+let settingsDirty = false;
+let csrfToken = '';
 
 async function api(path, data, key) {
   const options = {credentials: 'same-origin', headers: {}};
   if (data !== undefined) {
     options.method = 'POST';
     options.headers['Content-Type'] = 'application/json';
+    options.headers['X-DuckMiner-Request'] = '1';
+    if (csrfToken) options.headers['X-CSRF-Token'] = csrfToken;
     if (key) options.headers['Idempotency-Key'] = key;
     options.body = JSON.stringify(data);
   }
   const response = await fetch(path, options);
   const result = await response.json();
+  if (result.csrf) csrfToken = result.csrf;
   if (!response.ok) {
     if (response.status === 401) showLogin();
     throw new Error(result.error || 'Não foi possível conectar.');
@@ -33,7 +38,14 @@ function receive(result) {
   game.metrics = metrics;
   poolState = result.pool;
   rankingState = result.ranking;
-  $('accountName').textContent = result.user;
+  const settings = game.settings || {displayName: result.user, zoom: 75};
+  document.body.style.zoom = settings.zoom / 100;
+  $('accountName').textContent = settings.displayName;
+  $('settingsAccount').textContent = result.user;
+  if (!settingsDirty) {
+    $('settingsName').value = settings.displayName;
+    $('settingsZoom').value = String(settings.zoom);
+  }
   $('accountGate').hidden = true;
   document.querySelector('main').hidden = false;
   document.querySelector('header').hidden = false;
@@ -47,6 +59,7 @@ async function serverAction(action, fields = {}) {
   requestBusy = true;
   try {
     const result = await api('/api/action', {action, ...fields}, crypto.randomUUID());
+    if (action === 'settings') settingsDirty = false;
     if (action === 'install' || action === 'remove') selectedSlot = selectedId = null;
     receive(result);
     $('connectionStatus').textContent = result.message || 'Dados atualizados.';
@@ -120,15 +133,25 @@ $('accountForm').addEventListener('submit', async event => {
   try {
     const register = event.submitter?.value === 'register';
     receive(await api(register ? '/api/register' : '/api/login', {
-      name: $('loginName').value, password: $('loginPassword').value
+      name: $('loginName').value, password: $('loginPassword').value,
+      ...(register ? {invite: $('loginInvite').value} : {})
     }));
     $('loginPassword').value = '';
+    $('loginInvite').value = '';
     $('authMessage').textContent = '';
   } catch (error) {
     $('authMessage').textContent = error.message;
   } finally {
     requestBusy = false;
   }
+});
+$('playerSettings').addEventListener('input', () => { settingsDirty = true; });
+$('playerSettings').addEventListener('submit', event => {
+  event.preventDefault();
+  serverAction('settings', {
+    displayName: $('settingsName').value.trim(),
+    zoom: Number($('settingsZoom').value)
+  });
 });
 $('logoutButton').addEventListener('click', async () => {
   if (requestBusy) return;
@@ -149,4 +172,13 @@ setInterval(async () => {
 }, 2000);
 setInterval(() => { if (authenticated) { recordMetrics(); renderCharts(); } }, 15000);
 showLogin();
-api('/api/state').then(receive).catch(error => $('authMessage').textContent = error.message);
+if (location.protocol === 'file:') {
+  $('authMessage').textContent = 'Para abrir esta versão, extraia a pasta inteira e execute iniciar.bat. O jogo abrirá pelo servidor no navegador.';
+  $('accountForm').hidden = true;
+} else {
+  api('/api/state').then(receive).catch(error => {
+    $('authMessage').textContent = error instanceof TypeError
+      ? 'Sem conexão com o servidor. Execute iniciar.bat e mantenha a janela aberta.'
+      : error.message;
+  });
+}
