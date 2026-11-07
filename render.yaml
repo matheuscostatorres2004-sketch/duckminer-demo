@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: duckminer-demo
+    runtime: python
+    plan: free
+    buildCommand: python -m py_compile server.py
+    startCommand: python server.py --host 0.0.0.0 --port $PORT
+    healthCheckPath: /
+    envVars:
+      - key: DUCKMINER_SECURE_COOKIE
+        value: "1"
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: DUCKMINER_DEMO
+        value: "1"
