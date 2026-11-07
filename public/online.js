@@ -38,6 +38,8 @@ function receive(result) {
   game.metrics = metrics;
   poolState = result.pool;
   rankingState = result.ranking;
+  $('adminMenuButton').hidden = !result.adminEligible;
+  if (!result.adminEligible) $('tab-admin').hidden = true;
   const settings = game.settings || {displayName: result.user, zoom: 75};
   document.body.style.zoom = settings.zoom / 100;
   $('accountName').textContent = settings.displayName;
@@ -153,6 +155,72 @@ $('playerSettings').addEventListener('submit', event => {
     zoom: Number($('settingsZoom').value)
   });
 });
+let adminOffset = 0;
+
+async function loadAdmin(offset = adminOffset) {
+  try {
+    const result = await api('/api/admin?offset=' + offset);
+    adminOffset = result.offset;
+    $('adminSummary').textContent = result.total + ' contas cadastradas · '
+      + result.recent + ' com atividade no último minuto';
+    $('adminPage').textContent = 'Página ' + (Math.floor(adminOffset / result.limit) + 1);
+    $('adminPrevious').disabled = adminOffset === 0;
+    $('adminNext').disabled = adminOffset + result.limit >= result.total;
+    const rows = result.players.map(player => {
+      const row = document.createElement('div');
+      row.className = 'card admin-player';
+      const title = document.createElement('strong');
+      title.textContent = player.displayName + ' (@' + player.name + ')'
+        + (player.admin ? ' · Administrador' : player.blocked ? ' · Bloqueado' : ' · Liberado');
+      const info = document.createElement('p');
+      info.textContent = 'Saldo: ' + lmt(player.balance) + ' · Total minerado: ' + lmt(player.totalMined)
+        + ' · Máquinas instaladas: ' + player.installed + ' · No estoque: ' + player.inventory;
+      const battery = document.createElement('p');
+      battery.textContent = 'Poder: ' + fmt(player.power) + ' TH/s · Carga: '
+        + fmt(player.batterySeconds / 3600) + ' h · Baterias em estoque: ' + player.batteries;
+      const activity = document.createElement('p');
+      activity.textContent = 'Sessões válidas: ' + player.activeSessions
+        + ' · Última atividade: ' + (player.lastSeen ? new Date(player.lastSeen * 1000).toLocaleString('pt-BR') : 'Sem registro');
+      row.append(title, info, battery, activity);
+      if (!player.admin) {
+        for (const [action, label] of [[player.blocked ? 'unblock' : 'block', player.blocked ? 'Desbloquear' : 'Bloquear'], ['revoke', 'Encerrar sessões']]) {
+          const button = document.createElement('button');
+          button.textContent = label;
+          button.addEventListener('click', async () => {
+            if (!confirm(label + ' da conta @' + player.name + '?')) return;
+            button.disabled = true;
+            try {
+              const result = await api('/api/admin/action', {action, userId: player.id});
+              $('adminMessage').textContent = result.message;
+              await loadAdmin();
+            } catch (error) { $('adminMessage').textContent = error.message; }
+            finally { button.disabled = false; }
+          });
+          row.append(button);
+        }
+      }
+      return row;
+    });
+    $('adminUsers').replaceChildren(...rows);
+  } catch (error) {
+    $('adminUsers').replaceChildren();
+    $('adminSummary').textContent = '';
+    $('adminMessage').textContent = error.message;
+  }
+}
+$('adminUnlock').addEventListener('submit', async event => {
+  event.preventDefault();
+  try {
+    const result = await api('/api/admin/unlock', {key: $('adminKey').value});
+    $('adminKey').value = '';
+    $('adminMessage').textContent = result.message;
+    await loadAdmin(0);
+  } catch (error) { $('adminMessage').textContent = error.message; }
+  finally { $('adminKey').value = ''; }
+});
+$('adminRefresh').addEventListener('click', () => loadAdmin());
+$('adminPrevious').addEventListener('click', () => loadAdmin(Math.max(0, adminOffset - 50)));
+$('adminNext').addEventListener('click', () => loadAdmin(adminOffset + 50));
 $('logoutButton').addEventListener('click', async () => {
   if (requestBusy) return;
   try {

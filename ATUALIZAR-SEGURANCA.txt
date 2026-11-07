@@ -1,0 +1,60 @@
+ATUALIZACAO DE SEGURANCA DO DUCKMINER
+
+1. No Render, abra o servico duckminer-demo > Environment > Add Environment Variable.
+   Key: DUCKMINER_INVITE_CODE
+   Value: crie um codigo privado aleatorio com pelo menos 16 caracteres.
+   Prefira 24 ou mais caracteres. Para gerar no seu computador:
+     python -c "import secrets; print(secrets.token_urlsafe(24))"
+   Salve a variavel. Compartilhe o codigo apenas com as pessoas convidadas.
+   O codigo nao deve ir ao GitHub, ao HTML ou a capturas publicas.
+
+2. Extraia o ZIP e atualize no GitHub:
+     server.py
+     public/index.html
+     public/online.js
+     render.yaml
+   Mantenha os caminhos e a pasta public. O YAML pede o valor do convite
+   no painel caso ainda nao esteja configurado. Nao substitua sync: false
+   pelo valor do convite. Nao envie a pasta data para o GitHub.
+
+3. No Render, acompanhe o deploy automatico ou escolha Manual Deploy >
+   Deploy latest commit. Quando ficar Live, recarregue o jogo (Ctrl+F5).
+
+4. Teste:
+   - conta existente: Entrar sem convite;
+   - cadastro novo: exige o convite;
+   - cadastro sem convite: bloqueado;
+   - compras e pool continuam pelo servidor.
+
+IMPORTANTE: no plano gratuito com SQLite, um novo deploy pode apagar as
+contas. As migracoes deste pacote preservam um banco existente se ele estiver
+em armazenamento persistente, mas nao impedem o Render gratuito de descarta-lo.
+
+Sem a variavel ou com menos de 16 caracteres, novos cadastros ficam fechados.
+Para trocar o convite, altere a variavel no Render. Contas ja criadas continuam
+entrando. O convite e compartilhado e reutilizavel: nao e convite individual
+de uso unico. A sessao de um novo login dura um dia.
+
+PROTECOES ADICIONADAS
+- Convite validado no servidor; segredo fora do repositorio.
+- Limites persistidos por conta, sessao e conexao, inclusive para tentativas
+  rejeitadas. Cabecalhos de IP enviados pelo cliente nao sao confiados.
+- No maximo 24 conexoes atendidas em paralelo, com timeout de leitura, e
+  no maximo tres verificacoes de senha simultaneas.
+- Verificacao de origem, JSON e token de sessao para alteracoes de estado.
+- Cookies HttpOnly e SameSite=Strict; Secure no Render pela variavel existente.
+- Protecao contra embutir o site em frames; restricao de conexoes de scripts.
+- Reutilizar um identificador de compra com conteudo diferente gera conflito.
+- Limites do tamanho de requisicoes e mensagens sem senhas/tokens nos logs.
+
+LIMITES DESTA ETAPA
+Ainda e uma demonstracao com DCK ficticio e servidor HTTP de desenvolvimento.
+Faltam migracao para servidor de producao, banco persistente com backups,
+troca/recuperacao de senha, MFA das contas do jogo e revisao independente.
+A politica de scripts permite handlers inline herdados da interface. Uma
+politica mais restrita requer mover esses handlers para arquivos JavaScript.
+Um codigo de convite compartilhado pode ser repassado. Os limites reduzem
+abuso, mas nao garantem protecao contra ataques de indisponibilidade.
+
+Habilite tambem autenticacao em dois fatores nas suas contas GitHub e Render.
+Essas configuracoes sao feitas pelo titular nos respectivos paineis.
