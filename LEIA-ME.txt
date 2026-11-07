@@ -1,0 +1,45 @@
+DUCKMINER — CONTAS E POOL DCK COMPARTILHADA
+
+Requer Python 3.11 ou mais recente. Nenhum pacote adicional.
+
+1. Extraia esta pasta inteira do ZIP.
+2. No Windows, abra iniciar.bat. Deixe a janela do servidor aberta.
+3. Abra http://127.0.0.1:8000 no Chrome ou Edge.
+4. Crie uma conta (nome com letras/números/_, senha com 10 caracteres ou mais).
+5. Compre uma máquina e instale em um espaço vazio da Sala.
+6. Abra uma janela anônima e crie uma segunda conta para testar a mesma pool.
+
+Cada conta começa com 1.000 DCK fictícios e um dia de carga.
+O servidor fecha uma rodada global de 60 segundos e distribui exatamente
+10 DCK entre as contas que contribuíram. Sem participantes, não há emissão.
+Se só uma conta participa, ela recebe todo o prêmio daquela rodada.
+As compras e os resgates são verificados pelo servidor. Dados locais antigos
+do HTML não são importados. As novas contas começam com progresso próprio.
+
+As máquinas continuam contribuindo com o navegador fechado, enquanto houver
+carga. O processo Python precisa continuar rodando. Ao reiniciar o servidor,
+o tempo transcorrido é processado usando os dados salvos e a bateria restante.
+Zerar a carga também zera a contribuição parcial daquela conta, sem reiniciar
+a rodada global dos outros jogadores. Saldo e pagamentos usam unidades inteiras
+de um milionésimo de DCK para evitar duplicação/erros de arredondamento.
+
+As missões, conquistas, Diário, loja, caixas, melhorias e reserva de baterias
+continuam disponíveis. A carga ativa tem limite de sete dias. Os gráficos
+coletam amostras enquanto a página está aberta.
+
+O arquivo data/duckminer.sqlite3 guarda as contas e o progresso. Para backup,
+pare o servidor antes de copiar a pasta data inteira. Não publique essa pasta.
+
+Para testar em outros aparelhos da mesma rede, rode no terminal desta pasta:
+  python server.py --host 0.0.0.0
+Abra http://IP-DO-COMPUTADOR:8000 no outro aparelho. Permita a porta apenas
+na rede privada pelo firewall. Não é necessário expor isso na internet.
+
+Esta entrega é uma versão local de teste. Para hospedar para o público, use
+servidor com disco persistente, HTTPS, proxy reverso, execução supervisionada
+e backups. Defina DUCKMINER_SECURE_COOKIE=1 quando o acesso for por HTTPS.
+O servidor HTTP embutido serve para desenvolvimento/teste. Não hospede o
+banco de dados numa pasta de arquivos públicos. Não há recuperação de senha
+por email nesta versão. Não há criptomoedas reais ou saques.
+
+Não abra public/index.html com dois cliques. Use o endereço do servidor.
