@@ -81,6 +81,9 @@ def initialize():
             db.execute('ALTER TABLE users ADD COLUMN blocked INTEGER NOT NULL DEFAULT 0')
         if 'created_at' not in columns:
             db.execute('ALTER TABLE users ADD COLUMN created_at INTEGER NOT NULL DEFAULT 0')
+        if 'email' not in columns:
+            db.execute('ALTER TABLE users ADD COLUMN email TEXT')
+        db.execute('CREATE UNIQUE INDEX IF NOT EXISTS user_email ON users(email) WHERE email IS NOT NULL')
         columns = {row['name'] for row in db.execute('PRAGMA table_info(sessions)')}
         if 'csrf' not in columns:
             db.execute("ALTER TABLE sessions ADD COLUMN csrf TEXT NOT NULL DEFAULT ''")
@@ -335,6 +338,7 @@ def snapshot(db, uid):
             'ranking': sorted([{'name': json.loads(u['state']).get('settings', {}).get('displayName', u['name']), 'power': active(json.loads(u['state'])),
                                 'mine': u['id'] == uid} for u in users], key=lambda u: -u['power']),
             'user': next(u['name'] for u in users if u['id'] == uid),
+            'email': db.execute('SELECT email FROM users WHERE id=?',(uid,)).fetchone()[0],
             'adminEligible': admin_eligible(db, uid),
             'depositConfig': deposit_config(),
             'deposits': [dict(row) for row in db.execute('SELECT * FROM deposits WHERE user_id=? ORDER BY created DESC,rowid DESC LIMIT 50',(uid,))]}
@@ -476,6 +480,22 @@ def invitation_valid(value):
             and hmac.compare_digest(value.encode(), expected.encode()))
 
 
+def normalize_email(value):
+    if not isinstance(value,str):
+        raise ValueError('E-mail inválido.')
+    email = value.strip().lower()
+    if not 3 <= len(email) <= 254 or email.count('@') != 1:
+        raise ValueError('E-mail inválido.')
+    local, domain = email.split('@')
+    if (len(local) > 64 or not re.fullmatch(r"[a-z0-9.!#$%&'*+/=?^_`{|}~-]+",local)
+            or local.startswith('.') or local.endswith('.') or '..' in local):
+        raise ValueError('E-mail inválido.')
+    labels = domain.split('.')
+    if len(labels) < 2 or any(not re.fullmatch(r'[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?',label) for label in labels):
+        raise ValueError('E-mail inválido.')
+    return email
+
+
 class LimitedServer(ThreadingHTTPServer):
     """Bound sockets and threads, including clients that stop sending a request."""
     daemon_threads = True
@@ -602,18 +622,32 @@ class Handler(BaseHTTPRequestHandler):
                     raise ValueError('Pedido inválido.')
             if self.path in ('/api/register', '/api/login') and self.command == 'POST':
                 name, password = data.get('name', ''), data.get('password', '')
+                identifier = data.get('email', name)
                 # Count even malformed credentials and incorrect invitation codes.
-                account_key = hashlib.sha256(str(name).lower().encode()).hexdigest()
+                account_key = hashlib.sha256(str(identifier).strip().lower().encode()).hexdigest()
                 if not consume_limits([('auth-network:'+network_key, 100, 600),
                                        ('auth-account:'+account_key, 10, 600)], now):
                     return self.reply(429, {'error': 'Muitas tentativas. Aguarde dez minutos.'})
                 registering = self.path == '/api/register'
                 if registering and not invitation_valid(data.get('invite')):
                     return self.reply(403, {'error': 'Cadastro restrito. Solicite um convite válido ao responsável pelo jogo.'})
-                if not isinstance(name, str) or not re.fullmatch(r'[a-zA-Z0-9_]{3,24}', name) or not isinstance(password, str) or not 10 <= len(password) <= 128:
-                    raise ValueError('Use um nome com 3–24 letras, números ou _ e senha com 10–128 caracteres.')
-                name = name.lower()
-                user = db.execute('SELECT * FROM users WHERE name=?', (name,)).fetchone()
+                if not isinstance(password, str) or not 10 <= len(password) <= 128:
+                    raise ValueError('Senha inválida.')
+                email = None
+                if registering:
+                    if not isinstance(name,str) or not re.fullmatch(r'[a-zA-Z0-9_]{3,24}',name):
+                        raise ValueError('Nome de jogador inválido.')
+                    email = normalize_email(data.get('email'))
+                    name = name.lower()
+                    user = db.execute('SELECT * FROM users WHERE name=? OR email=?',(name,email)).fetchone()
+                elif isinstance(identifier,str) and '@' in identifier:
+                    email = normalize_email(identifier)
+                    user = db.execute('SELECT * FROM users WHERE email=?',(email,)).fetchone()
+                elif isinstance(identifier,str):
+                    # Migration path for accounts created before email login.
+                    user = db.execute('SELECT * FROM users WHERE name=? AND email IS NULL',(identifier.strip().lower(),)).fetchone()
+                else:
+                    raise ValueError('Credenciais inválidas.')
                 salt = user['salt'] if user else secrets.token_bytes(16)
                 if not HASH_SLOTS.acquire(blocking=False):
                     return self.reply(429, {'error': 'Servidor ocupado. Aguarde alguns segundos.'})
@@ -626,10 +660,10 @@ class Handler(BaseHTTPRequestHandler):
                 db.execute('BEGIN IMMEDIATE')
                 advance(db, now)
                 if registering:
-                    if db.execute('SELECT 1 FROM users WHERE name=?', (name,)).fetchone():
+                    if db.execute('SELECT 1 FROM users WHERE name=? OR email=?', (name,email)).fetchone():
                         db.rollback()
                         return self.reply(400, {'error': 'Nome indisponível ou credenciais inválidas.'})
-                    uid = db.execute('INSERT INTO users(name,salt,password,state,created_at) VALUES(?,?,?,?,?)', (name, salt, hashed, json.dumps(fresh()),now)).lastrowid
+                    uid = db.execute('INSERT INTO users(name,salt,password,state,created_at,email) VALUES(?,?,?,?,?,?)', (name, salt, hashed, json.dumps(fresh()),now,email)).lastrowid
                 else:
                     uid = user['id']
                     if db.execute('SELECT blocked FROM users WHERE id=?', (uid,)).fetchone()[0]:
@@ -663,6 +697,8 @@ class Handler(BaseHTTPRequestHandler):
             if path == '/api/admin/unlock':
                 if not consume_limits([('admin-unlock:'+str(uid), 5, 600)], now):
                     return self.reply(429, {'error': 'Muitas tentativas de acesso administrativo. Aguarde dez minutos.'})
+            if path == '/api/account/email' and not consume_limits([('link-email:'+str(uid),5,600)],now):
+                return self.reply(429, {'error':'Muitas tentativas. Aguarde dez minutos.'})
             db.execute('BEGIN IMMEDIATE')
             # Recheck after acquiring the write lock, so logout/revocation wins races.
             session = db.execute('SELECT user_id,csrf,admin_until FROM sessions JOIN users ON users.id=sessions.user_id WHERE token=? AND expires>? AND blocked=0', (digest, now)).fetchone()
@@ -676,6 +712,27 @@ class Handler(BaseHTTPRequestHandler):
                 csrf = session['csrf']
             advance(db, now)
             db.execute('UPDATE sessions SET last_seen=? WHERE token=?', (now,digest))
+            if path == '/api/account/email' and self.command == 'POST':
+                email = normalize_email(data.get('email'))
+                user = db.execute('SELECT * FROM users WHERE id=?',(uid,)).fetchone()
+                password = data.get('password')
+                if user['email'] or not isinstance(password,str) or not 10 <= len(password) <= 128:
+                    raise ValueError('Não foi possível vincular o e-mail.')
+                if not HASH_SLOTS.acquire(blocking=False):
+                    db.rollback()
+                    return self.reply(429,{'error':'Servidor ocupado. Tente novamente.'})
+                try:
+                    hashed = hashlib.scrypt(password.encode(),salt=user['salt'],n=16384,r=8,p=1)
+                finally:
+                    HASH_SLOTS.release()
+                if not hmac.compare_digest(hashed,user['password']) or db.execute('SELECT 1 FROM users WHERE email=?',(email,)).fetchone():
+                    raise ValueError('Não foi possível vincular o e-mail.')
+                db.execute('UPDATE users SET email=? WHERE id=?',(email,uid))
+                db.execute('DELETE FROM sessions WHERE user_id=? AND token<>?',(uid,digest))
+                result = snapshot(db,uid)
+                result.update(csrf=csrf,message='E-mail cadastrado. Use-o no próximo acesso.')
+                db.commit()
+                return self.reply(200,result)
             if path.startswith('/api/admin'):
                 if not admin_eligible(db, uid):
                     db.rollback()
