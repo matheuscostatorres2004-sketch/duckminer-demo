@@ -54,6 +54,7 @@ function receive(result) {
   authenticated = true;
   render();
   renderExchangeHistory();
+  renderDeposits(result.depositConfig, result.deposits || []);
 }
 
 async function serverAction(action, fields = {}) {

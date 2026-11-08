@@ -17,7 +17,7 @@ from datetime import datetime, timedelta, timezone
 from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from socket import timeout as SocketTimeout
-from urllib.parse import urlsplit
+from urllib.parse import urlsplit, parse_qs
 
 ROOT = Path(__file__).resolve().parent
 DB = ROOT / 'data' / 'duckminer.sqlite3'
@@ -66,10 +66,21 @@ def initialize():
           user_id INTEGER, key TEXT, PRIMARY KEY(user_id,key));
         CREATE TABLE IF NOT EXISTS attempts(ip TEXT PRIMARY KEY, start INTEGER, count INTEGER);
         CREATE TABLE IF NOT EXISTS limits(key TEXT PRIMARY KEY, start INTEGER, count INTEGER);
+        CREATE TABLE IF NOT EXISTS admin_audit(
+          id INTEGER PRIMARY KEY, at INTEGER, actor INTEGER, target INTEGER, action TEXT);
         ''')
+        columns = {row['name'] for row in db.execute('PRAGMA table_info(users)')}
+        if 'blocked' not in columns:
+            db.execute('ALTER TABLE users ADD COLUMN blocked INTEGER NOT NULL DEFAULT 0')
+        if 'created_at' not in columns:
+            db.execute('ALTER TABLE users ADD COLUMN created_at INTEGER NOT NULL DEFAULT 0')
         columns = {row['name'] for row in db.execute('PRAGMA table_info(sessions)')}
         if 'csrf' not in columns:
             db.execute("ALTER TABLE sessions ADD COLUMN csrf TEXT NOT NULL DEFAULT ''")
+        if 'admin_until' not in columns:
+            db.execute('ALTER TABLE sessions ADD COLUMN admin_until INTEGER NOT NULL DEFAULT 0')
+        if 'last_seen' not in columns:
+            db.execute('ALTER TABLE sessions ADD COLUMN last_seen INTEGER NOT NULL DEFAULT 0')
         columns = {row['name'] for row in db.execute('PRAGMA table_info(requests)')}
         if 'body_hash' not in columns:
             db.execute("ALTER TABLE requests ADD COLUMN body_hash TEXT NOT NULL DEFAULT ''")
@@ -103,7 +114,7 @@ def advance(db, now):
     last, start = pool['last'], pool['start']
     if now <= last:
         return
-    states = {r['id']: json.loads(r['state']) for r in db.execute('SELECT id,state FROM users')}
+    states = {r['id']: json.loads(r['state']) for r in db.execute('SELECT id,state FROM users WHERE blocked=0')}
     while last < now:
         # Empty pools can skip whole intervals after downtime.
         if not any(s['batterySeconds'] > 0 and power(s) for s in states.values()) and not any(s['work'] for s in states.values()):
@@ -303,7 +314,7 @@ def act(s, data):
 
 
 def snapshot(db, uid):
-    users = list(db.execute('SELECT id,name,state FROM users'))
+    users = list(db.execute('SELECT id,name,state FROM users WHERE blocked=0'))
     s = next(json.loads(u['state']) for u in users if u['id'] == uid)
     for period in MISSION:
         progress(s, period)
@@ -316,7 +327,31 @@ def snapshot(db, uid):
             'pool': {'power': network, 'elapsed': elapsed, 'reward': 10},
             'ranking': sorted([{'name': json.loads(u['state']).get('settings', {}).get('displayName', u['name']), 'power': active(json.loads(u['state'])),
                                 'mine': u['id'] == uid} for u in users], key=lambda u: -u['power']),
-            'user': next(u['name'] for u in users if u['id'] == uid)}
+            'user': next(u['name'] for u in users if u['id'] == uid),
+            'adminEligible': admin_eligible(db, uid)}
+
+
+def admin_eligible(db, uid):
+    expected = os.environ.get('DUCKMINER_ADMIN_USERNAME', '').strip().lower()
+    row = db.execute('SELECT name FROM users WHERE id=? AND blocked=0', (uid,)).fetchone()
+    return bool(expected and row and row['name'] == expected)
+
+
+def admin_snapshot(db, now, offset):
+    total = db.execute('SELECT count(*) FROM users').fetchone()[0]
+    recent = db.execute('SELECT count(DISTINCT user_id) FROM sessions WHERE expires>? AND last_seen>?', (now, now-60)).fetchone()[0]
+    players = []
+    for user in db.execute('SELECT id,name,state,blocked,created_at FROM users ORDER BY id LIMIT 50 OFFSET ?', (offset,)):
+        state = json.loads(user['state'])
+        session = db.execute('SELECT count(*) AS count,max(last_seen) AS seen FROM sessions WHERE user_id=? AND expires>?', (user['id'],now)).fetchone()
+        players.append(dict(id=user['id'], name=user['name'], displayName=state.get('settings',{}).get('displayName',user['name']),
+                            blocked=bool(user['blocked']), createdAt=user['created_at'],
+                            balance=state['coins']/UNIT, totalMined=state['mined']/UNIT,
+                            installed=len(machines(state)), inventory=len(state['inventory']),
+                            power=power(state), batterySeconds=state['batterySeconds'],
+                            batteries=state['batteryReserve'], activeSessions=session['count'],
+                            lastSeen=session['seen'] or 0, admin=user['name'] == os.environ.get('DUCKMINER_ADMIN_USERNAME','').strip().lower()))
+    return dict(total=total, recent=recent, players=players, offset=offset, limit=50)
 
 
 def consume_limits(rules, now):
@@ -405,7 +440,7 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_GET(self):
-        if self.path == '/api/state':
+        if urlsplit(self.path).path in ('/api/state', '/api/admin'):
             return self.api()
         files = {'/': ('index.html', 'text/html; charset=utf-8'),
                  '/online.js': ('online.js', 'application/javascript; charset=utf-8')}
@@ -449,6 +484,7 @@ class Handler(BaseHTTPRequestHandler):
         try:
             data = {}
             now = int(time.time())
+            path = urlsplit(self.path).path
             network_key = hashlib.sha256(self.client_address[0].encode()).hexdigest()
             # Do not trust a client-supplied X-Forwarded-For header. Account and
             # session limits below isolate players even when Render shares a proxy IP.
@@ -482,7 +518,7 @@ class Handler(BaseHTTPRequestHandler):
                     hashed = hashlib.scrypt(password.encode(), salt=salt, n=16384, r=8, p=1)
                 finally:
                     HASH_SLOTS.release()
-                if (registering and user) or (not registering and (not user or not hmac.compare_digest(hashed, user['password']))):
+                if (registering and user) or (not registering and (not user or user['blocked'] or not hmac.compare_digest(hashed, user['password']))):
                     return self.reply(400, {'error': 'Nome indisponível ou credenciais inválidas.'})
                 db.execute('BEGIN IMMEDIATE')
                 advance(db, now)
@@ -490,12 +526,15 @@ class Handler(BaseHTTPRequestHandler):
                     if db.execute('SELECT 1 FROM users WHERE name=?', (name,)).fetchone():
                         db.rollback()
                         return self.reply(400, {'error': 'Nome indisponível ou credenciais inválidas.'})
-                    uid = db.execute('INSERT INTO users(name,salt,password,state) VALUES(?,?,?,?)', (name, salt, hashed, json.dumps(fresh()))).lastrowid
+                    uid = db.execute('INSERT INTO users(name,salt,password,state,created_at) VALUES(?,?,?,?,?)', (name, salt, hashed, json.dumps(fresh()),now)).lastrowid
                 else:
                     uid = user['id']
+                    if db.execute('SELECT blocked FROM users WHERE id=?', (uid,)).fetchone()[0]:
+                        db.rollback()
+                        return self.reply(403, {'error': 'Conta indisponível.'})
                 token = secrets.token_urlsafe(32)
                 csrf = secrets.token_urlsafe(32)
-                db.execute('INSERT INTO sessions(token,user_id,expires,csrf) VALUES(?,?,?,?)', (hashlib.sha256(token.encode()).hexdigest(), uid, now+SESSION_SECONDS, csrf))
+                db.execute('INSERT INTO sessions(token,user_id,expires,csrf,last_seen) VALUES(?,?,?,?,?)', (hashlib.sha256(token.encode()).hexdigest(), uid, now+SESSION_SECONDS, csrf,now))
                 db.execute('DELETE FROM sessions WHERE expires<=?', (now,))
                 result = snapshot(db, uid)
                 result['csrf'] = csrf
@@ -505,7 +544,7 @@ class Handler(BaseHTTPRequestHandler):
             cookie = SimpleCookie(self.headers.get('Cookie', ''))
             token = cookie['duck_session'].value if 'duck_session' in cookie else ''
             digest = hashlib.sha256(token.encode()).hexdigest()
-            session = db.execute('SELECT user_id,csrf FROM sessions WHERE token=? AND expires>?', (digest, now)).fetchone()
+            session = db.execute('SELECT user_id,csrf,admin_until FROM sessions JOIN users ON users.id=sessions.user_id WHERE token=? AND expires>? AND blocked=0', (digest, now)).fetchone()
             if not session:
                 db.commit()
                 return self.reply(401, {'error': 'Entre na sua conta.'})
@@ -518,9 +557,12 @@ class Handler(BaseHTTPRequestHandler):
                     return self.reply(403, {'error': 'Sessão desatualizada. Recarregue o jogo.'})
             if not consume_limits(rules, now):
                 return self.reply(429, {'error': 'Muitas ações. Aguarde um minuto.'})
+            if path == '/api/admin/unlock':
+                if not consume_limits([('admin-unlock:'+str(uid), 5, 600)], now):
+                    return self.reply(429, {'error': 'Muitas tentativas de acesso administrativo. Aguarde dez minutos.'})
             db.execute('BEGIN IMMEDIATE')
             # Recheck after acquiring the write lock, so logout/revocation wins races.
-            session = db.execute('SELECT user_id,csrf FROM sessions WHERE token=? AND expires>?', (digest, now)).fetchone()
+            session = db.execute('SELECT user_id,csrf,admin_until FROM sessions JOIN users ON users.id=sessions.user_id WHERE token=? AND expires>? AND blocked=0', (digest, now)).fetchone()
             if not session:
                 db.rollback()
                 return self.reply(401, {'error': 'Entre na sua conta.'})
@@ -530,6 +572,53 @@ class Handler(BaseHTTPRequestHandler):
             else:
                 csrf = session['csrf']
             advance(db, now)
+            db.execute('UPDATE sessions SET last_seen=? WHERE token=?', (now,digest))
+            if path.startswith('/api/admin'):
+                if not admin_eligible(db, uid):
+                    db.rollback()
+                    return self.reply(403, {'error': 'Acesso exclusivo do administrador.'})
+                if path == '/api/admin/unlock' and self.command == 'POST':
+                    expected = os.environ.get('DUCKMINER_ADMIN_KEY', '')
+                    supplied = data.get('key')
+                    if len(expected) < 24 or not isinstance(supplied,str) or not hmac.compare_digest(expected.encode(), supplied.encode()):
+                        db.rollback()
+                        return self.reply(403, {'error': 'Chave administrativa inválida ou não configurada.'})
+                    db.execute('UPDATE sessions SET admin_until=? WHERE token=?', (now+900,digest))
+                    db.commit()
+                    return self.reply(200, {'message':'Administração liberada por 15 minutos.'})
+                if session['admin_until'] <= now:
+                    db.rollback()
+                    return self.reply(403, {'error': 'Digite a chave administrativa para liberar o painel.'})
+                if path == '/api/admin' and self.command == 'GET':
+                    offset = int(parse_qs(urlsplit(self.path).query).get('offset',['0'])[0])
+                    if offset < 0:
+                        raise ValueError('Página inválida.')
+                    result = admin_snapshot(db,now,offset)
+                    db.commit()
+                    return self.reply(200,result)
+                if path == '/api/admin/action' and self.command == 'POST':
+                    target = integer(data,'userId')
+                    target_user = db.execute('SELECT name FROM users WHERE id=?',(target,)).fetchone()
+                    if not target_user:
+                        raise ValueError('Conta indisponível.')
+                    if target == uid or admin_eligible(db,target):
+                        db.rollback()
+                        return self.reply(400,{'error':'Esta operação não se aplica à conta administradora.'})
+                    action = data.get('action')
+                    if action in ('block','unblock'):
+                        db.execute('UPDATE users SET blocked=? WHERE id=?',(int(action == 'block'),target))
+                        if action == 'block':
+                            state = json.loads(db.execute('SELECT state FROM users WHERE id=?',(target,)).fetchone()[0])
+                            state['work'] = 0
+                            db.execute('UPDATE users SET state=? WHERE id=?',(json.dumps(state),target))
+                    elif action != 'revoke':
+                        raise ValueError('Ação inválida.')
+                    if action in ('block','revoke'):
+                        db.execute('DELETE FROM sessions WHERE user_id=?',(target,))
+                    db.execute('INSERT INTO admin_audit(at,actor,target,action) VALUES(?,?,?,?)',(now,uid,target,action))
+                    db.commit()
+                    return self.reply(200,{'message':'Operação administrativa concluída.'})
+                raise ValueError('Rota administrativa inválida.')
             message = None
             if self.path == '/api/logout' and self.command == 'POST':
                 db.execute('DELETE FROM sessions WHERE token=?', (digest,))

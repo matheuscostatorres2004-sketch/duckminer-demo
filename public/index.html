@@ -115,7 +115,17 @@ dialog{width:min(520px,calc(100% - 32px));max-height:75vh;overflow:auto;backgrou
 
 
 
-<section hidden id="tab-wallet"><div class="card"><h2>👛 Carteira DCK</h2><p id="walletCoins"></p><p>DCK recebido das rodadas, conquistas e missões.</p></div></section>
+<section hidden id="tab-wallet"><div class="card"><h2>👛 Carteira DCK</h2><p id="walletCoins"></p><p>DCK recebido das rodadas, conquistas, missões e depósitos aprovados.</p>
+<h3>🐕 Depósito DOGE</h3>
+<p id="depositAvailability"></p>
+<form id="depositForm">
+<label for="depositAmount">Quantidade de DOGE</label>
+<input id="depositAmount" type="number" min="0.00000001" max="1000000" step="0.00000001" required>
+<button id="depositCreate" type="submit">Solicitar depósito</button>
+</form>
+<p id="depositMessage" role="status"></p>
+<p>O administrador fornece um endereço exclusivo na rede Dogecoin. Após enviar, informe o TXID e aguarde a conferência manual para receber DCK. DCK é um crédito do jogo.</p>
+<div id="depositList"></div></div></section>
 <section hidden id="tab-history"><div class="card"><h2>📜 Histórico</h2><div id="events">Bem-vindo!</div></div><div class="card"></div></section><section hidden id="tab-progress"><div class="card"><h2>💾 Progresso</h2><div class="row"><button class="secondary" onclick="save(true)">Salvar jogo</button></div><p class="hint">Seu progresso fica salvo na sua conta neste servidor. DCK é uma moeda fictícia.</p></div><div class="card"></div></section><section hidden id="tab-settings"><div class="card">
 <h2>⚙️ Configurações do jogador</h2>
 <p>Nome de acesso: <strong id="settingsAccount"></strong></p>
@@ -134,7 +144,7 @@ dialog{width:min(520px,calc(100% - 32px));max-height:75vh;overflow:auto;backgrou
 <p id="adminMessage" role="status"></p>
 <p id="adminSummary"></p>
 <div class="row"><button id="adminRefresh">Atualizar usuários</button><button id="adminPrevious" disabled>Anterior</button><span id="adminPage"></span><button id="adminNext" disabled>Próxima</button></div>
-<div id="adminUsers"></div>
+<div id="adminUsers"></div><h3>Depósitos DOGE</h3><button id="adminDepositsRefresh">Atualizar depósitos</button><p id="adminDepositMessage" role="status"></p><div id="adminDeposits"></div><button id="depositPrevious">Anterior</button><button id="depositNext">Próxima</button>
 </div></section></main>
 <script>
 const models=[
@@ -448,4 +458,4 @@ function addTestXmr(){
   save();
 }
 
-</script><script src="online.js"></script></body></html>
+</script><script src="online.js"></script><script src="deposits.js"></script></body></html>
