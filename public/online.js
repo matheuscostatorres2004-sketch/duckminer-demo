@@ -4,6 +4,7 @@ let authenticated = false;
 let requestBusy = false;
 let settingsDirty = false;
 let csrfToken = '';
+let authMode = 'login';
 
 async function api(path, data, key) {
   const options = {credentials: 'same-origin', headers: {}};
@@ -27,6 +28,7 @@ async function api(path, data, key) {
 
 function showLogin() {
   authenticated = false;
+  document.body.classList.add("auth-screen");
   $('accountGate').hidden = false;
   document.querySelector('main').hidden = true;
   document.querySelector('header').hidden = true;
@@ -44,6 +46,8 @@ function receive(result) {
   document.body.style.zoom = settings.zoom / 100;
   $('accountName').textContent = settings.displayName;
   $('settingsAccount').textContent = result.user;
+  $('settingsEmail').textContent = result.email || 'Ainda não cadastrado';
+  $('linkEmailForm').hidden = Boolean(result.email);
   if (!settingsDirty) {
     $('settingsName').value = settings.displayName;
     $('settingsZoom').value = String(settings.zoom);
@@ -52,6 +56,7 @@ function receive(result) {
   document.querySelector('main').hidden = false;
   document.querySelector('header').hidden = false;
   authenticated = true;
+  document.body.classList.remove("auth-screen");
   render();
   renderExchangeHistory();
   renderDeposits(result.depositConfig, result.deposits || []);
@@ -134,10 +139,10 @@ $('accountForm').addEventListener('submit', async event => {
   requestBusy = true;
   $('authMessage').textContent = 'Conectando…';
   try {
-    const register = event.submitter?.value === 'register';
+    const register = authMode === 'register';
     receive(await api(register ? '/api/register' : '/api/login', {
-      name: $('loginName').value, password: $('loginPassword').value,
-      ...(register ? {invite: $('loginInvite').value} : {})
+      email: $('loginName').value.trim(), password: $('loginPassword').value,
+      ...(register ? {name:$('registerNickname').value.trim(), invite: $('loginInvite').value} : {})
     }));
     $('loginPassword').value = '';
     $('loginInvite').value = '';
@@ -145,6 +150,40 @@ $('accountForm').addEventListener('submit', async event => {
   } catch (error) {
     $('authMessage').textContent = error.message;
   } finally {
+    requestBusy = false;
+  }
+});
+function setAuthMode(mode) {
+  authMode = mode;
+  const register = mode === 'register';
+  $('registerFields').hidden = !register;
+  $('registerNickname').required = register;
+  $('loginInvite').required = register;
+  $('loginName').type = register ? 'email' : 'text';
+  $('loginPassword').autocomplete = register ? 'new-password' : 'current-password';
+  $('authSubmit').textContent = register ? 'Criar minha conta' : 'Entrar';
+  $('authTitle').textContent = register ? 'Criar conta' : 'Acessar conta';
+  $('legacyLoginHint').hidden = register;
+  $('authMessage').textContent = '';
+  $('authSwitchText').textContent = register ? 'Já tem conta?' : 'Ainda não tem conta?';
+  $('authSwitch').textContent = register ? 'Entrar' : 'Criar conta';
+}
+$('authSwitch').addEventListener('click', () => setAuthMode(authMode === 'login' ? 'register' : 'login'));
+
+$('linkEmailForm').addEventListener('submit', async event => {
+  event.preventDefault();
+  if (requestBusy) {
+    $('linkEmailMessage').textContent = 'Aguarde a atualização e tente novamente.';
+    return;
+  }
+  requestBusy = true;
+  try {
+    const result = await api('/api/account/email', {email:$('linkEmail').value, password:$('linkPassword').value});
+    receive(result);
+    $('connectionStatus').textContent = result.message;
+  } catch (error) { $('linkEmailMessage').textContent = error.message; }
+  finally {
+    $('linkPassword').value = '';
     requestBusy = false;
   }
 });
@@ -251,3 +290,10 @@ if (location.protocol === 'file:') {
       : error.message;
   });
 }
+
+$('passwordVisibility').addEventListener('click', () => {
+  const visible = $('loginPassword').type === 'password';
+  $('loginPassword').type = visible ? 'text' : 'password';
+  $('passwordVisibility').setAttribute('aria-label', visible ? 'Ocultar senha' : 'Mostrar senha');
+  $('passwordVisibility').setAttribute('aria-pressed', String(visible));
+});

@@ -1,0 +1,6 @@
+No GitHub, atualize server.py e a pasta public inteira.
+Acesso por e-mail e senha. Nome do jogador e convite aparecem no cadastro.
+Contas antigas entram pelo nome ate vincular e-mail em Configuracoes.
+Ainda nao ha verificacao por e-mail ou recuperacao de senha.
+A variavel DUCKMINER_ADMIN_USERNAME continua com o nome do jogador.
+A publicacao no Render gratuito pode apagar contas SQLite locais.

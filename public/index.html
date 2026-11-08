@@ -1,120 +1,157 @@
-<!DOCTYPE html>
-
-<html lang="pt-BR">
-<head>
-<meta charset="utf-8"/><meta content="width=device-width,initial-scale=1" name="viewport"/>
-<title>DuckMiner DCK | Bateria na Sala</title>
-<style>
-:root{--bg:#07111f;--panel:#13243a;--panel2:#0b1929;--green:#43e6a0;--muted:#a9bbce;--line:#30465d}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:#f4f8fc;font:15px Arial,sans-serif}
-header{padding:16px 20px;background:#101f32;border-bottom:2px solid var(--green);display:flex;justify-content:space-between;gap:16px;align-items:center;flex-wrap:wrap}
-h1{margin:0;color:var(--green);font-size:25px}h2{color:var(--green);margin:0 0 14px}h3{margin:6px 0}
-main{max-width:1250px;margin:auto;padding:18px}.stats{display:flex;gap:9px;flex-wrap:wrap}.stat{background:var(--panel2);padding:11px 14px;border-radius:9px;min-width:125px}.stat small{color:var(--muted)}.stat b{display:block;color:var(--green);margin-top:6px}
-.card{background:var(--panel);padding:17px;border-radius:13px;margin-bottom:16px;border:1px solid #203850}
-button{border:0;border-radius:8px;padding:10px 13px;font-weight:bold;cursor:pointer;background:var(--green);color:#062417}
-button.secondary{background:#344b65;color:white}button.danger{background:#b93648;color:white}button:disabled{opacity:.45;cursor:not-allowed}
-input,select{background:#081522;color:white;border:1px solid #496078;border-radius:7px;padding:10px;max-width:100%}
-.row{display:flex;gap:9px;align-items:center;flex-wrap:wrap}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
-.room{background:linear-gradient(135deg,#182d40,#263c4c,#101d2b);border:3px solid #536b7f;border-radius:13px;padding:17px}
-.racks{display:grid;grid-template-columns:repeat(3,1fr);gap:13px}.rack{background:linear-gradient(90deg,#394b5a,#192b3a,#394b5a);border:4px solid #708394;border-radius:8px;padding:9px}
-.rack h3{text-align:center;color:var(--green)}.slots{display:grid;gap:8px}.slot{min-height:86px;background:#091522;border:2px dashed #52677a;border-radius:7px;display:flex;align-items:center;justify-content:center;text-align:center;padding:6px;cursor:pointer}.slot.filled{border:1px solid #37d997;background:#102d2b}.slot.over{border-color:#fff;background:#174832}.slot small{display:block;color:var(--muted);font-size:11px}.slot b{color:var(--green);font-size:12px}.machine-icon{font-size:25px}
-.machine{background:#091725;padding:13px;border:1px solid var(--line);border-radius:10px}.machine .icon{text-align:center;font-size:35px}.machine button{width:100%;margin-top:7px}.inventory-item,.market-item{background:#091725;border:1px solid var(--line);padding:11px;border-radius:8px;margin:8px 0;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;cursor:grab}
-.muted,.hint{color:var(--muted);font-size:13px;line-height:1.5}.bar{height:10px;background:#34495d;border-radius:8px;overflow:hidden;margin:8px 0}.bar div{height:100%;background:var(--green);width:0}
-#events{max-height:170px;overflow:auto;color:#c5d2df;font-size:13px}#events p{margin:0;padding:7px;border-bottom:1px solid var(--line)}
-.tabs{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px}.tabs button{background:#263d55;color:white}.tabs button.active{background:var(--green);color:#062417}
-.pill{display:inline-block;padding:4px 8px;border-radius:20px;background:#214c3b;color:#8fffc4;font-size:12px}.mission{padding:10px;background:#0a1928;border-radius:8px;border:1px solid var(--line)}
-@media(max-width:700px){.racks{grid-template-columns:1fr}header{display:block}.stats{margin-top:12px}main{padding:10px}}
-
-.chartbox{background:#081725;padding:12px;border-radius:10px}.chartbox canvas{width:100%;height:190px;display:block}.crate{padding:16px;background:#0b1b2e;border:1px solid #405970;border-radius:12px}
-dialog{width:min(520px,calc(100% - 32px));max-height:75vh;overflow:auto;background:#172638;color:#fff;border:1px solid #466079;border-radius:14px;padding:18px}dialog::backdrop{background:#0009}.brand-row{display:flex;align-items:center;gap:12px;width:100%}#gameMenu{display:flex;flex-wrap:wrap;gap:6px;min-width:0}#gameMenu button{white-space:nowrap;padding:6px 9px}#gameMenu button.active{outline:2px solid #46d7a0;outline-offset:-2px}#purchaseNotice{position:fixed;bottom:18px;right:16px;z-index:30;max-width:calc(100% - 32px);pointer-events:none}#purchaseNotice:not(:empty){padding:12px 16px;background:#172638;color:#fff;border:1px solid #46d7a0;border-radius:10px}body{zoom:0.75}#extraMenu{position:relative;margin-left:auto;flex-shrink:0;z-index:12}#extraMenu summary{list-style:none;cursor:pointer;padding:6px 10px;font-size:22px}#extraMenu summary::-webkit-details-marker{display:none}#extraMenu .extra-menu-items{position:absolute;right:0;top:100%;display:grid;gap:6px;padding:8px;background:#172638;border:1px solid #466079;border-radius:10px}#extraMenu button{white-space:nowrap;text-align:left}.room-panels{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;align-items:start}.room-panels>.card{margin:0;padding:9px;min-width:0;font-size:12px;overflow-wrap:anywhere}.room-panels h2{font-size:16px;margin:0 0 6px}.room-panels p{margin:5px 0}.room-panels .stats{display:flex;flex-wrap:wrap;gap:4px;margin:5px 0}.room-panels .stat{flex:1 1 90px;min-width:0;padding:4px}.room-panels .stat b{font-size:13px}.room-panels button{padding:5px 7px;font-size:12px}#batteryBar{display:grid;width:65%;max-width:180px;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px;margin:6px 0}#batteryBar span{height:11px;border-radius:3px;background:linear-gradient(to right,#46d7a0 0 var(--charge,0%),#344b63 var(--charge,0%) 100%)}.pool-details summary{cursor:pointer;font-weight:bold;margin-top:8px}.pool-details dl{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:5px 8px;margin:8px 0}.pool-details dd{margin:0;text-align:right}.pool-details progress{width:65px;max-width:100%;accent-color:#46d7a0}.room-panels .pool-panel{font-size:15px;font-weight:650}.room-panels .pool-panel h2{font-size:21px;font-weight:800}.room-panels .pool-panel .stat b{font-size:18px;font-weight:800}.room-panels .pool-panel .stat small{font-size:13px;font-weight:700}.pool-panel .pool-details dl{grid-template-columns:minmax(0,1fr) minmax(0,auto)}.room-panels{align-items:stretch;margin-bottom:8px}.room-panels>.card,.room-panels .pool-panel{padding:6px 8px;font-size:14px;font-weight:700}.room-panels>.card h2,.room-panels .pool-panel h2{font-size:19px;font-weight:800;margin-bottom:4px}.room-panels .stat small,.room-panels .pool-panel .stat small{font-size:13px;font-weight:700}.room-panels .stat b,.room-panels .pool-panel .stat b{font-size:17px;font-weight:800}.room-panels .hint,.room-panels button{font-size:13px;font-weight:700}.room-panels p{margin:3px 0}#gameMenu button{font-size:18px;font-weight:750;padding:9px 14px}.room-panels{grid-template-columns:repeat(3,minmax(0,1fr));max-width:100%}.room-missions details{margin-top:5px}.room-missions summary{cursor:pointer}.room-missions .mission{min-width:0;padding:5px;margin-top:4px}@media(max-width:520px){.room-panels{grid-template-columns:repeat(2,minmax(0,1fr))}.room-missions{grid-column:1/-1}}.room-panels .room-missions{font-size:16px;font-weight:700}.room-panels .room-missions h2{font-size:22px;font-weight:800}.room-missions summary,.room-missions .mission b{font-size:17px;font-weight:800}.room-panels .room-missions button{font-size:15px;font-weight:750}.room-missions{display:flex;flex-direction:column}.mission-actions{margin-top:auto;padding-top:8px}#timedMissionDialog .mission-close{position:absolute;top:8px;right:8px}#timedMissionDialog .mission-close button{font-size:22px;line-height:1}#timedMissionTitle{padding-right:36px}#roomMissionSummary h3{margin:5px 0 2px;font-size:14px}#roomMissionSummary ul{padding:0;margin:0;list-style:none;font-size:13px}#roomMissionSummary li{display:flex;justify-content:space-between;gap:5px}#roomMissionSummary strong{white-space:nowrap}#roomMissionSummary{display:grid;gap:7px}#roomMissionSummary .room-mission-group{min-width:0;padding:6px 8px;border:1px solid #344b63;border-radius:8px}#roomMissionSummary .room-mission-group h3{margin:0 0 4px;font-weight:800}#roomMissionSummary li+li{margin-top:3px}#roomMissionSummary{max-height:180px;overflow:auto}#roomMissionSummary .room-mission-group h3{font-size:22px}#roomMissionSummary ul{font-size:19px;line-height:1.3}[hidden]{display:none!important}.login-card{max-width:430px;margin:40px auto}.login-card label{display:block;margin:12px 0}.login-card input{display:block;width:100%;box-sizing:border-box}.account-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:8px}.account-bar #connectionStatus{flex:1;font-size:13px}.admin-player{margin-top:10px}.admin-player p{overflow-wrap:anywhere}.admin-player button{margin:4px}</style></head>
-<body>
-<div id="accountGate" class="card login-card">
-  <h1>🦆 DuckMiner</h1><p>Entre para jogar na Pool DCK compartilhada.</p>
-  <form id="accountForm">
-    <label>Nome de jogador <input id="loginName" required pattern="[a-zA-Z0-9_]{3,24}" minlength="3" maxlength="24" autocomplete="username"></label>
-    <label>Senha <input id="loginPassword" type="password" required minlength="10" maxlength="128" autocomplete="current-password"></label>
-    <label>Convite para criar conta <input id="loginInvite" type="password" maxlength="256" autocomplete="off" placeholder="Necessário apenas no cadastro"></label><div class="row"><button type="submit" value="login">Entrar</button><button type="submit" value="register">Criar conta</button></div>
-  </form><p id="authMessage" role="status"></p>
-</div>
-<header hidden><div class="brand-row"><div><h1 aria-label="DuckMiner">🦆</h1></div><nav id="gameMenu" aria-label="Menu do DuckMiner">
-<button class="active" onclick="showTab('room',this)">🏠 Sala</button>
-<button onclick="showTab('shop',this)">🛒 Loja</button>
-
-
-
-<button onclick="showTab('wallet')">👛 Carteira</button>
-</nav><details id="extraMenu"><summary aria-label="Abrir menu de histórico e progresso">☰</summary><div class="extra-menu-items">
-<button class="active" onclick="showTab('room',this)">🏠 Sala</button>
-<button onclick="showTab('shop',this)">🛒 Loja</button>
-<button onclick="showTab('missions',this)">🎯 Missões</button>
-<button onclick="showTab('charts',this)">📊 Gráficos</button>
-<button onclick="showTab('daily',this)">📅 Diário</button>
-<button onclick="showTab('ranking',this)">🏆 Ranking</button><button onclick="showTab('wallet')">👛 Carteira</button>
-<button onclick="showTab('history')">📜 Histórico</button><button onclick="showTab('progress')">💾 Progresso</button><button onclick="showTab('settings')">⚙️ Configurações</button><button id="adminMenuButton" hidden onclick="showTab('admin')">🛡️ Administração</button></div></details></div>
-<div class="stats">
-<div class="stat"><small>Carteira</small><b id="balance">1.000 DCK</b></div>
-
-<div class="stat"><small>Energia</small><b id="energy">0 W</b></div>
-<div class="stat"><small>Tempo online</small><b id="online">00:00:00</b></div>
-</div></header>
-<div id="purchaseNotice" role="status" aria-live="polite"></div><main hidden>
-<div class="account-bar"><span>👤 <b id="accountName"></b></span><span id="connectionStatus" role="status">Conectado</span><button id="logoutButton">Sair da conta</button></div>
-
-<section id="tab-room">
-<div class="room-panels"><div class="card"><h2>🔋 Bateria</h2>
-
-<div class="stats"><div class="stat"><small>Carga restante</small><b id="batteryTime">1d 00h 00m</b></div><div class="stat"><small>Baterias no estoque</small><b id="batteryCount">0</b></div></div>
-<div id="batteryBar" role="img" aria-label="Carga em uma escala de sete dias"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
-<p id="batteryStatus"></p><button id="rechargeBattery" onclick="rechargeBattery()">🔋 Recarregar bateria</button><button id="clearBattery" class="danger" onclick="clearBattery()">Zerar carga</button><p class="hint" id="batteryReserve"></p>
-</div><div class="card pool-panel">
-    <h2>⛏️ Pool DCK</h2>
-    
-    <div class="stats">
-  <div class="stat"><small>Poder da rede</small><b id="poolNetworkPower"></b></div>
-  <div class="stat"><small>Recompensa por rodada</small><b id="poolReward"></b></div>
-</div>
-
-<details class="pool-details">
-  <summary>📊 Detalhes da Pool DCK</summary>
-  <dl>
-    <dt>Seu poder ativo</dt><dd id="poolYourPower"></dd>
-    <dt>Poder dos outros jogadores</dt><dd id="poolRivalPower"></dd>
-    <dt>Sua participação atual</dt><dd id="poolShare"></dd>
-    <dt>Progresso da rodada</dt><dd><progress id="poolRound" aria-label="Progresso da rodada"></progress> <span id="poolElapsed"></span></dd>
-    <dt>Última recompensa recebida</dt><dd id="poolLast"></dd>
-  </dl>
-  <p class="hint">Prêmio de 10 DCK fictícios a cada rodada global de 60 segundos, dividido pela contribuição acumulada.</p>
-</details>
+<!DOCTYPE html>
+
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"/><meta content="width=device-width,initial-scale=1" name="viewport"/>
+<title>DuckMiner DCK | Bateria na Sala</title>
+<style>
+:root{--bg:#07111f;--panel:#13243a;--panel2:#0b1929;--green:#43e6a0;--muted:#a9bbce;--line:#30465d}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:#f4f8fc;font:15px Arial,sans-serif}
+header{padding:16px 20px;background:#101f32;border-bottom:2px solid var(--green);display:flex;justify-content:space-between;gap:16px;align-items:center;flex-wrap:wrap}
+h1{margin:0;color:var(--green);font-size:25px}h2{color:var(--green);margin:0 0 14px}h3{margin:6px 0}
+main{max-width:1250px;margin:auto;padding:18px}.stats{display:flex;gap:9px;flex-wrap:wrap}.stat{background:var(--panel2);padding:11px 14px;border-radius:9px;min-width:125px}.stat small{color:var(--muted)}.stat b{display:block;color:var(--green);margin-top:6px}
+.card{background:var(--panel);padding:17px;border-radius:13px;margin-bottom:16px;border:1px solid #203850}
+button{border:0;border-radius:8px;padding:10px 13px;font-weight:bold;cursor:pointer;background:var(--green);color:#062417}
+button.secondary{background:#344b65;color:white}button.danger{background:#b93648;color:white}button:disabled{opacity:.45;cursor:not-allowed}
+input,select{background:#081522;color:white;border:1px solid #496078;border-radius:7px;padding:10px;max-width:100%}
+.row{display:flex;gap:9px;align-items:center;flex-wrap:wrap}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+.room{background:linear-gradient(135deg,#182d40,#263c4c,#101d2b);border:3px solid #536b7f;border-radius:13px;padding:17px}
+.racks{display:grid;grid-template-columns:repeat(3,1fr);gap:13px}.rack{background:linear-gradient(90deg,#394b5a,#192b3a,#394b5a);border:4px solid #708394;border-radius:8px;padding:9px}
+.rack h3{text-align:center;color:var(--green)}.slots{display:grid;gap:8px}.slot{min-height:86px;background:#091522;border:2px dashed #52677a;border-radius:7px;display:flex;align-items:center;justify-content:center;text-align:center;padding:6px;cursor:pointer}.slot.filled{border:1px solid #37d997;background:#102d2b}.slot.over{border-color:#fff;background:#174832}.slot small{display:block;color:var(--muted);font-size:11px}.slot b{color:var(--green);font-size:12px}.machine-icon{font-size:25px}
+.machine{background:#091725;padding:13px;border:1px solid var(--line);border-radius:10px}.machine .icon{text-align:center;font-size:35px}.machine button{width:100%;margin-top:7px}.inventory-item,.market-item{background:#091725;border:1px solid var(--line);padding:11px;border-radius:8px;margin:8px 0;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;cursor:grab}
+.muted,.hint{color:var(--muted);font-size:13px;line-height:1.5}.bar{height:10px;background:#34495d;border-radius:8px;overflow:hidden;margin:8px 0}.bar div{height:100%;background:var(--green);width:0}
+#events{max-height:170px;overflow:auto;color:#c5d2df;font-size:13px}#events p{margin:0;padding:7px;border-bottom:1px solid var(--line)}
+.tabs{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px}.tabs button{background:#263d55;color:white}.tabs button.active{background:var(--green);color:#062417}
+.pill{display:inline-block;padding:4px 8px;border-radius:20px;background:#214c3b;color:#8fffc4;font-size:12px}.mission{padding:10px;background:#0a1928;border-radius:8px;border:1px solid var(--line)}
+@media(max-width:700px){.racks{grid-template-columns:1fr}header{display:block}.stats{margin-top:12px}main{padding:10px}}
+
+.chartbox{background:#081725;padding:12px;border-radius:10px}.chartbox canvas{width:100%;height:190px;display:block}.crate{padding:16px;background:#0b1b2e;border:1px solid #405970;border-radius:12px}
+dialog{width:min(520px,calc(100% - 32px));max-height:75vh;overflow:auto;background:#172638;color:#fff;border:1px solid #466079;border-radius:14px;padding:18px}dialog::backdrop{background:#0009}.brand-row{display:flex;align-items:center;gap:12px;width:100%}#gameMenu{display:flex;flex-wrap:wrap;gap:6px;min-width:0}#gameMenu button{white-space:nowrap;padding:6px 9px}#gameMenu button.active{outline:2px solid #46d7a0;outline-offset:-2px}#purchaseNotice{position:fixed;bottom:18px;right:16px;z-index:30;max-width:calc(100% - 32px);pointer-events:none}#purchaseNotice:not(:empty){padding:12px 16px;background:#172638;color:#fff;border:1px solid #46d7a0;border-radius:10px}body{zoom:0.75}#extraMenu{position:relative;margin-left:auto;flex-shrink:0;z-index:12}#extraMenu summary{list-style:none;cursor:pointer;padding:6px 10px;font-size:22px}#extraMenu summary::-webkit-details-marker{display:none}#extraMenu .extra-menu-items{position:absolute;right:0;top:100%;display:grid;gap:6px;padding:8px;background:#172638;border:1px solid #466079;border-radius:10px}#extraMenu button{white-space:nowrap;text-align:left}.room-panels{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;align-items:start}.room-panels>.card{margin:0;padding:9px;min-width:0;font-size:12px;overflow-wrap:anywhere}.room-panels h2{font-size:16px;margin:0 0 6px}.room-panels p{margin:5px 0}.room-panels .stats{display:flex;flex-wrap:wrap;gap:4px;margin:5px 0}.room-panels .stat{flex:1 1 90px;min-width:0;padding:4px}.room-panels .stat b{font-size:13px}.room-panels button{padding:5px 7px;font-size:12px}#batteryBar{display:grid;width:65%;max-width:180px;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px;margin:6px 0}#batteryBar span{height:11px;border-radius:3px;background:linear-gradient(to right,#46d7a0 0 var(--charge,0%),#344b63 var(--charge,0%) 100%)}.pool-details summary{cursor:pointer;font-weight:bold;margin-top:8px}.pool-details dl{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:5px 8px;margin:8px 0}.pool-details dd{margin:0;text-align:right}.pool-details progress{width:65px;max-width:100%;accent-color:#46d7a0}.room-panels .pool-panel{font-size:15px;font-weight:650}.room-panels .pool-panel h2{font-size:21px;font-weight:800}.room-panels .pool-panel .stat b{font-size:18px;font-weight:800}.room-panels .pool-panel .stat small{font-size:13px;font-weight:700}.pool-panel .pool-details dl{grid-template-columns:minmax(0,1fr) minmax(0,auto)}.room-panels{align-items:stretch;margin-bottom:8px}.room-panels>.card,.room-panels .pool-panel{padding:6px 8px;font-size:14px;font-weight:700}.room-panels>.card h2,.room-panels .pool-panel h2{font-size:19px;font-weight:800;margin-bottom:4px}.room-panels .stat small,.room-panels .pool-panel .stat small{font-size:13px;font-weight:700}.room-panels .stat b,.room-panels .pool-panel .stat b{font-size:17px;font-weight:800}.room-panels .hint,.room-panels button{font-size:13px;font-weight:700}.room-panels p{margin:3px 0}#gameMenu button{font-size:18px;font-weight:750;padding:9px 14px}.room-panels{grid-template-columns:repeat(3,minmax(0,1fr));max-width:100%}.room-missions details{margin-top:5px}.room-missions summary{cursor:pointer}.room-missions .mission{min-width:0;padding:5px;margin-top:4px}@media(max-width:520px){.room-panels{grid-template-columns:repeat(2,minmax(0,1fr))}.room-missions{grid-column:1/-1}}.room-panels .room-missions{font-size:16px;font-weight:700}.room-panels .room-missions h2{font-size:22px;font-weight:800}.room-missions summary,.room-missions .mission b{font-size:17px;font-weight:800}.room-panels .room-missions button{font-size:15px;font-weight:750}.room-missions{display:flex;flex-direction:column}.mission-actions{margin-top:auto;padding-top:8px}#timedMissionDialog .mission-close{position:absolute;top:8px;right:8px}#timedMissionDialog .mission-close button{font-size:22px;line-height:1}#timedMissionTitle{padding-right:36px}#roomMissionSummary h3{margin:5px 0 2px;font-size:14px}#roomMissionSummary ul{padding:0;margin:0;list-style:none;font-size:13px}#roomMissionSummary li{display:flex;justify-content:space-between;gap:5px}#roomMissionSummary strong{white-space:nowrap}#roomMissionSummary{display:grid;gap:7px}#roomMissionSummary .room-mission-group{min-width:0;padding:6px 8px;border:1px solid #344b63;border-radius:8px}#roomMissionSummary .room-mission-group h3{margin:0 0 4px;font-weight:800}#roomMissionSummary li+li{margin-top:3px}#roomMissionSummary{max-height:180px;overflow:auto}#roomMissionSummary .room-mission-group h3{font-size:22px}#roomMissionSummary ul{font-size:19px;line-height:1.3}[hidden]{display:none!important}.login-card{max-width:430px;margin:40px auto}.login-card label{display:block;margin:12px 0}.login-card input{display:block;width:100%;box-sizing:border-box}.account-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:8px}.account-bar #connectionStatus{flex:1;font-size:13px}.admin-player{margin-top:10px}.admin-player p{overflow-wrap:anywhere}.admin-player button{margin:4px}.login-card .row button{flex:1}.login-card #authSubmit{width:100%;margin-top:10px}.login-card #authTitle{font-size:20px}.login-card p{line-height:1.4}#linkEmailForm{padding:12px;border:1px solid #344b63;border-radius:8px;margin-bottom:16px}#linkEmailForm label{display:block;margin:8px 0}body.auth-screen{zoom:1!important;background:#0d0e1b;min-height:100vh;margin:0;color:#f5f5fa}
+#accountGate{min-height:100vh;box-sizing:border-box;font-family:Arial,sans-serif}
+.auth-brand{display:flex;align-items:center;gap:9px;padding:22px 28px;color:#46d7a0;font-size:19px;font-weight:800;letter-spacing:2px}
+.auth-content{width:min(420px,calc(100% - 36px));margin:48px auto 0}
+.auth-content h1{margin:0 0 36px;text-align:center;color:#fff;font-size:38px;letter-spacing:4px;font-weight:800}
+.auth-card{background:#252633;border:1px solid #2b2c3a;border-radius:7px;padding:38px 48px 30px;box-sizing:border-box}
+.auth-card label{display:block;margin:0 0 8px;color:#c4c5d3;font-size:12px}
+.auth-card input{display:block;width:100%;box-sizing:border-box;min-height:42px;margin:0 0 23px;padding:10px 12px;background:#edf1fa;color:#172030;border:1px solid #d1d7e3;border-radius:2px;font-size:14px}
+.auth-card input:focus-visible{outline:2px solid #46d7a0;outline-offset:2px}
+.auth-password{position:relative}.auth-password input{padding-right:44px}
+.auth-password #passwordVisibility{position:absolute;right:4px;top:4px;margin:0;height:34px;width:34px;padding:0;background:transparent;color:#44516b;border:0;font-size:19px}
+.auth-card #authSubmit{display:block;min-height:41px;width:100%;background:#46d7a0;color:#09261e;border:0;border-radius:3px;font-size:14px;font-weight:750;margin-top:16px}
+.auth-card #authMessage{font-size:13px;line-height:1.5;color:#f1c788;overflow-wrap:anywhere}
+.auth-switch{margin:19px 0 0;text-align:center;font-size:12px;color:#b4b5c6}
+.auth-switch #authSwitch{padding:0;margin:0;background:transparent;border:0;color:#69b6ff;font-size:12px;text-decoration:underline}
+.auth-footer{text-align:center;font-size:11px;color:#8b8d9e;margin:28px 0}
+@media(max-width:480px){.auth-content{margin-top:26px}.auth-card{padding:28px 24px}.auth-content h1{font-size:30px;margin-bottom:26px}.auth-brand{padding:20px;font-size:17px}}
+</style></head>
+<body class="auth-screen">
+<div id="accountGate">
+  <div class="auth-brand"><span aria-hidden="true">🦆</span> DUCKMINER</div>
+  <div class="auth-content">
+    <h1 id="authTitle">ENTRAR</h1>
+    <div class="auth-card">
+      <form id="accountForm">
+        <label for="loginName">E-mail</label>
+        <input id="loginName" required maxlength="254" autocomplete="username" inputmode="email" placeholder="voce@exemplo.com">
+        <label for="loginPassword">Senha</label>
+        <div class="auth-password">
+          <input id="loginPassword" type="password" required minlength="10" maxlength="128" autocomplete="current-password" placeholder="Sua senha">
+          <button id="passwordVisibility" type="button" aria-label="Mostrar senha" aria-pressed="false">◉</button>
+        </div>
+        <p id="legacyLoginHint" class="hint">Conta antiga sem e-mail? Use seu nome de acesso e cadastre um e-mail em Configurações.</p>
+<div id="registerFields" hidden>
+<label for="registerNickname">Nome do jogador</label>
+<input id="registerNickname" minlength="3" maxlength="24" pattern="[a-zA-Z0-9_]{3,24}" autocomplete="nickname" placeholder="Seu nome no jogo">
+          <label for="loginInvite">Código de convite</label>
+          <input id="loginInvite" type="password" maxlength="256" autocomplete="off" placeholder="Convite do administrador">
+        </div>
+        <p id="authMessage" role="status" aria-live="polite"></p>
+        <button id="authSubmit" type="submit" value="login">Entrar</button>
+      </form>
+      <p class="auth-switch"><span id="authSwitchText">Ainda não tem conta?</span> <button id="authSwitch" type="button">Criar conta</button></p>
+    </div>
+    <p class="auth-footer">Sua sala. Suas máquinas. Sua Pool DCK.</p>
   </div>
-<div class="card room-missions">
-<h2>🏆 Missões</h2>
-<div id="roomMissionSummary" role="region" aria-label="Progresso das missões" tabindex="0"></div><div class="mission-actions"><button type="button" onclick="openTimedMissions()">Ver missões</button></div>
-<dialog id="timedMissionDialog" aria-labelledby="timedMissionTitle">
-  <h2 id="timedMissionTitle">🏆 Missões</h2><h3>📅 Diárias</h3>
-  <div id="dailyMissions"></div>
-  <h3>🗓️ Semanais</h3><div id="weeklyMissions"></div>
-  <form method="dialog" class="mission-close"><button class="secondary" aria-label="Fechar janela de missões">×</button></form>
-</dialog>
-</div></div>
-
-<div class="card"><h2>🏭 Minha sala de mineração</h2><div class="room"><div style="text-align:center;color:var(--green);letter-spacing:3px;margin:8px 0 20px">DUCKMINER MINING FACILITY</div><div class="racks" id="racks"></div></div>
-<p class="hint" id="roomInfo"></p><p class="hint">Toque em um espaço vazio para instalar uma máquina ou em uma máquina instalada para devolvê-la ao estoque.</p><div id="selection" aria-live="polite"></div><dialog id="machinePicker" aria-label="Escolher máquina" oncancel="cancelInstallation()"><div id="machineChoices"></div><button class="secondary" onclick="cancelInstallation()">Fechar</button></dialog>
-<div class="row"><button onclick="expandRoom()">Expandir sala / adicionar rack</button><span class="muted" id="rackPrice"></span></div></div>
-
-</section>
-<section hidden="" id="tab-shop"><div class="card"><h2>🖥️ Loja de máquinas</h2><div class="row"><button onclick="showTab('upgrades')">Melhorias</button><button onclick="showTab('crates')">Caixas</button></div><div class="card"><h3>🔋 Bateria</h3><p>+24 h de carga · 150 DCK</p><button onclick="buyBattery()">Comprar bateria</button></div><div class="grid" id="shop"></div></div><div class="card"><h2>📦 Estoque</h2><div id="inventory"></div></div></section>
-<section hidden="" id="tab-upgrades"><div class="card"><button onclick="showTab('shop')">Voltar à Loja</button><h2>⚙️ Laboratório de melhorias</h2><p class="hint">Aprimore máquinas instaladas. Cada melhoria aumenta o poder e pode reduzir o consumo.</p><div id="upgradeList"></div><button class="secondary" onclick="buyCooling()">❄ Comprar refrigeração</button></div></section>
-<section hidden="" id="tab-missions"><div class="card"><h2>🏆 Missões e conquistas</h2><div class="grid" id="missions"></div></div></section>
-<section hidden="" id="tab-ranking"><div class="card"><h2>🏆 Ranking de empresas</h2><p class="hint">Jogadores cadastrados nesta Pool DCK.</p><div id="rankingList"></div></div></section>
-
-<section hidden="" id="tab-charts"><div class="card"><h2>📊 Gráficos de desempenho</h2><div class="stats"><div class="stat"><small>Total minerado</small><b id="total">0 DCK</b></div></div><p class="hint">Amostras a cada 15 segundos enquanto o jogo está aberto.</p><div class="grid"><div class="chartbox"><h3>Saldo DCK</h3><canvas id="chartBalance"></canvas></div><div class="chartbox"><h3>Poder TH/s</h3><canvas id="chartPower"></canvas></div><div class="chartbox"><h3>Total minerado</h3><canvas id="chartMined"></canvas></div><div class="chartbox"><h3>Consumo W</h3><canvas id="chartWatts"></canvas></div></div><button onclick="recordMetrics();renderCharts()">Registrar agora</button></div></section>
-<section hidden="" id="tab-daily"><div class="card"><h2>🎁 Recompensas diárias</h2><p class="hint">Um resgate por dia no horário do dispositivo. Sequência de dias aumenta o bônus.</p><div class="stats"><div class="stat"><small>Sequência</small><b id="dailyStreak"></b></div><div class="stat"><small>Recompensa</small><b id="dailyReward"></b></div></div><p id="dailyStatus"></p><button id="dailyButton" onclick="claimDaily()">Resgatar</button></div></section>
-<section hidden="" id="tab-crates"><div class="card"><button onclick="showTab('shop')">Voltar à Loja</button><h2>📦 Caixas de equipamentos</h2><p class="hint">Prêmios aleatórios com probabilidades exibidas. As máquinas vão para o estoque.</p><div class="grid"><div class="crate"><h3>📦 Caixa Básica</h3><p>250 DCK</p><p class="hint">Comum 75% • Rara 20% • Épica 4% • Lendária 1%</p><button onclick="openCrate(false)">Abrir</button></div><div class="crate"><h3>🎁 Caixa Premium</h3><p>2.000 DCK</p><p class="hint">Comum 30% • Rara 45% • Épica 20% • Lendária 5%</p><button onclick="openCrate(true)">Abrir</button></div></div><div class="mission" id="crateResult" style="margin-top:12px">Nenhuma caixa aberta nesta sessão.</div></div></section>
-
-
-
-
-
+</div>
+<header hidden><div class="brand-row"><div><h1 aria-label="DuckMiner">🦆</h1></div><nav id="gameMenu" aria-label="Menu do DuckMiner">
+<button class="active" onclick="showTab('room',this)">🏠 Sala</button>
+<button onclick="showTab('shop',this)">🛒 Loja</button>
+
+
+
+<button onclick="showTab('wallet')">👛 Carteira</button>
+</nav><details id="extraMenu"><summary aria-label="Abrir menu de histórico e progresso">☰</summary><div class="extra-menu-items">
+<button class="active" onclick="showTab('room',this)">🏠 Sala</button>
+<button onclick="showTab('shop',this)">🛒 Loja</button>
+<button onclick="showTab('missions',this)">🎯 Missões</button>
+<button onclick="showTab('charts',this)">📊 Gráficos</button>
+<button onclick="showTab('daily',this)">📅 Diário</button>
+<button onclick="showTab('ranking',this)">🏆 Ranking</button><button onclick="showTab('wallet')">👛 Carteira</button>
+<button onclick="showTab('history')">📜 Histórico</button><button onclick="showTab('progress')">💾 Progresso</button><button onclick="showTab('settings')">⚙️ Configurações</button><button id="adminMenuButton" hidden onclick="showTab('admin')">🛡️ Administração</button></div></details></div>
+<div class="stats">
+<div class="stat"><small>Carteira</small><b id="balance">1.000 DCK</b></div>
+
+<div class="stat"><small>Energia</small><b id="energy">0 W</b></div>
+<div class="stat"><small>Tempo online</small><b id="online">00:00:00</b></div>
+</div></header>
+<div id="purchaseNotice" role="status" aria-live="polite"></div><main hidden>
+<div class="account-bar"><span>👤 <b id="accountName"></b></span><span id="connectionStatus" role="status">Conectado</span><button id="logoutButton">Sair da conta</button></div>
+
+<section id="tab-room">
+<div class="room-panels"><div class="card"><h2>🔋 Bateria</h2>
+
+<div class="stats"><div class="stat"><small>Carga restante</small><b id="batteryTime">1d 00h 00m</b></div><div class="stat"><small>Baterias no estoque</small><b id="batteryCount">0</b></div></div>
+<div id="batteryBar" role="img" aria-label="Carga em uma escala de sete dias"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+<p id="batteryStatus"></p><button id="rechargeBattery" onclick="rechargeBattery()">🔋 Recarregar bateria</button><button id="clearBattery" class="danger" onclick="clearBattery()">Zerar carga</button><p class="hint" id="batteryReserve"></p>
+</div><div class="card pool-panel">
+    <h2>⛏️ Pool DCK</h2>
+    
+    <div class="stats">
+  <div class="stat"><small>Poder da rede</small><b id="poolNetworkPower"></b></div>
+  <div class="stat"><small>Recompensa por rodada</small><b id="poolReward"></b></div>
+</div>
+
+<details class="pool-details">
+  <summary>📊 Detalhes da Pool DCK</summary>
+  <dl>
+    <dt>Seu poder ativo</dt><dd id="poolYourPower"></dd>
+    <dt>Poder dos outros jogadores</dt><dd id="poolRivalPower"></dd>
+    <dt>Sua participação atual</dt><dd id="poolShare"></dd>
+    <dt>Progresso da rodada</dt><dd><progress id="poolRound" aria-label="Progresso da rodada"></progress> <span id="poolElapsed"></span></dd>
+    <dt>Última recompensa recebida</dt><dd id="poolLast"></dd>
+  </dl>
+  <p class="hint">Prêmio de 10 DCK fictícios a cada rodada global de 60 segundos, dividido pela contribuição acumulada.</p>
+</details>
+  </div>
+<div class="card room-missions">
+<h2>🏆 Missões</h2>
+<div id="roomMissionSummary" role="region" aria-label="Progresso das missões" tabindex="0"></div><div class="mission-actions"><button type="button" onclick="openTimedMissions()">Ver missões</button></div>
+<dialog id="timedMissionDialog" aria-labelledby="timedMissionTitle">
+  <h2 id="timedMissionTitle">🏆 Missões</h2><h3>📅 Diárias</h3>
+  <div id="dailyMissions"></div>
+  <h3>🗓️ Semanais</h3><div id="weeklyMissions"></div>
+  <form method="dialog" class="mission-close"><button class="secondary" aria-label="Fechar janela de missões">×</button></form>
+</dialog>
+</div></div>
+
+<div class="card"><h2>🏭 Minha sala de mineração</h2><div class="room"><div style="text-align:center;color:var(--green);letter-spacing:3px;margin:8px 0 20px">DUCKMINER MINING FACILITY</div><div class="racks" id="racks"></div></div>
+<p class="hint" id="roomInfo"></p><p class="hint">Toque em um espaço vazio para instalar uma máquina ou em uma máquina instalada para devolvê-la ao estoque.</p><div id="selection" aria-live="polite"></div><dialog id="machinePicker" aria-label="Escolher máquina" oncancel="cancelInstallation()"><div id="machineChoices"></div><button class="secondary" onclick="cancelInstallation()">Fechar</button></dialog>
+<div class="row"><button onclick="expandRoom()">Expandir sala / adicionar rack</button><span class="muted" id="rackPrice"></span></div></div>
+
+</section>
+<section hidden="" id="tab-shop"><div class="card"><h2>🖥️ Loja de máquinas</h2><div class="row"><button onclick="showTab('upgrades')">Melhorias</button><button onclick="showTab('crates')">Caixas</button></div><div class="card"><h3>🔋 Bateria</h3><p>+24 h de carga · 150 DCK</p><button onclick="buyBattery()">Comprar bateria</button></div><div class="grid" id="shop"></div></div><div class="card"><h2>📦 Estoque</h2><div id="inventory"></div></div></section>
+<section hidden="" id="tab-upgrades"><div class="card"><button onclick="showTab('shop')">Voltar à Loja</button><h2>⚙️ Laboratório de melhorias</h2><p class="hint">Aprimore máquinas instaladas. Cada melhoria aumenta o poder e pode reduzir o consumo.</p><div id="upgradeList"></div><button class="secondary" onclick="buyCooling()">❄ Comprar refrigeração</button></div></section>
+<section hidden="" id="tab-missions"><div class="card"><h2>🏆 Missões e conquistas</h2><div class="grid" id="missions"></div></div></section>
+<section hidden="" id="tab-ranking"><div class="card"><h2>🏆 Ranking de empresas</h2><p class="hint">Jogadores cadastrados nesta Pool DCK.</p><div id="rankingList"></div></div></section>
+
+<section hidden="" id="tab-charts"><div class="card"><h2>📊 Gráficos de desempenho</h2><div class="stats"><div class="stat"><small>Total minerado</small><b id="total">0 DCK</b></div></div><p class="hint">Amostras a cada 15 segundos enquanto o jogo está aberto.</p><div class="grid"><div class="chartbox"><h3>Saldo DCK</h3><canvas id="chartBalance"></canvas></div><div class="chartbox"><h3>Poder TH/s</h3><canvas id="chartPower"></canvas></div><div class="chartbox"><h3>Total minerado</h3><canvas id="chartMined"></canvas></div><div class="chartbox"><h3>Consumo W</h3><canvas id="chartWatts"></canvas></div></div><button onclick="recordMetrics();renderCharts()">Registrar agora</button></div></section>
+<section hidden="" id="tab-daily"><div class="card"><h2>🎁 Recompensas diárias</h2><p class="hint">Um resgate por dia no horário do dispositivo. Sequência de dias aumenta o bônus.</p><div class="stats"><div class="stat"><small>Sequência</small><b id="dailyStreak"></b></div><div class="stat"><small>Recompensa</small><b id="dailyReward"></b></div></div><p id="dailyStatus"></p><button id="dailyButton" onclick="claimDaily()">Resgatar</button></div></section>
+<section hidden="" id="tab-crates"><div class="card"><button onclick="showTab('shop')">Voltar à Loja</button><h2>📦 Caixas de equipamentos</h2><p class="hint">Prêmios aleatórios com probabilidades exibidas. As máquinas vão para o estoque.</p><div class="grid"><div class="crate"><h3>📦 Caixa Básica</h3><p>250 DCK</p><p class="hint">Comum 75% • Rara 20% • Épica 4% • Lendária 1%</p><button onclick="openCrate(false)">Abrir</button></div><div class="crate"><h3>🎁 Caixa Premium</h3><p>2.000 DCK</p><p class="hint">Comum 30% • Rara 45% • Épica 20% • Lendária 5%</p><button onclick="openCrate(true)">Abrir</button></div></div><div class="mission" id="crateResult" style="margin-top:12px">Nenhuma caixa aberta nesta sessão.</div></div></section>
+
+
+
+
+
 <section hidden id="tab-wallet"><div class="card"><h2>👛 Carteira DCK</h2><p id="walletCoins"></p><p>DCK recebido das rodadas, conquistas, missões e depósitos aprovados.</p>
 <h3>🐕 Depósito DOGE</h3>
 <p id="depositAvailability"></p>
@@ -125,10 +162,10 @@ dialog{width:min(520px,calc(100% - 32px));max-height:75vh;overflow:auto;backgrou
 </form>
 <p id="depositMessage" role="status"></p>
 <p>O administrador fornece um endereço exclusivo na rede Dogecoin. Após enviar, informe o TXID e aguarde a conferência manual para receber DCK. DCK é um crédito do jogo.</p>
-<div id="depositList"></div></div></section>
+<div id="depositList"></div></div></section>
 <section hidden id="tab-history"><div class="card"><h2>📜 Histórico</h2><div id="events">Bem-vindo!</div></div><div class="card"></div></section><section hidden id="tab-progress"><div class="card"><h2>💾 Progresso</h2><div class="row"><button class="secondary" onclick="save(true)">Salvar jogo</button></div><p class="hint">Seu progresso fica salvo na sua conta neste servidor. DCK é uma moeda fictícia.</p></div><div class="card"></div></section><section hidden id="tab-settings"><div class="card">
 <h2>⚙️ Configurações do jogador</h2>
-<p>Nome de acesso: <strong id="settingsAccount"></strong></p>
+<p>Nome do jogador: <strong id="settingsAccount"></strong></p><p>E-mail de acesso: <strong id="settingsEmail"></strong></p><form id="linkEmailForm" hidden><h3>Vincular e-mail à conta antiga</h3><label>E-mail <input id="linkEmail" type="email" required maxlength="254" autocomplete="email"></label><label>Senha atual <input id="linkPassword" type="password" required minlength="10" maxlength="128" autocomplete="current-password"></label><button type="submit">Cadastrar e-mail</button><p id="linkEmailMessage" role="status"></p></form>
 <form id="playerSettings">
 <p><label for="settingsName">Nome de exibição</label><br><input id="settingsName" minlength="2" maxlength="24" required autocomplete="nickname"></p>
 <p><label for="settingsZoom">Tamanho do jogo</label><br><select id="settingsZoom"><option value="75">75%</option><option value="90">90%</option><option value="100">100%</option><option value="110">110%</option><option value="125">125%</option></select></p>
@@ -145,317 +182,317 @@ dialog{width:min(520px,calc(100% - 32px));max-height:75vh;overflow:auto;backgrou
 <p id="adminSummary"></p>
 <div class="row"><button id="adminRefresh">Atualizar usuários</button><button id="adminPrevious" disabled>Anterior</button><span id="adminPage"></span><button id="adminNext" disabled>Próxima</button></div>
 <div id="adminUsers"></div><h3>Depósitos DOGE</h3><button id="adminDepositsRefresh">Atualizar depósitos</button><p id="adminDepositMessage" role="status"></p><div id="adminDeposits"></div><button id="depositPrevious">Anterior</button><button id="depositNext">Próxima</button>
-</div></section></main>
-<script>
-const models=[
-{name:"Antminer Básica",power:100,cost:125,watts:100,icon:"🖥️"},
-{name:"Antminer Avançada",power:500,cost:450,watts:250,icon:"💻"},
-{name:"Antminer Profissional",power:1000,cost:1250,watts:450,icon:"⚙️"},
-{name:"Antminer Ultra",power:2500,cost:2750,watts:800,icon:"🚀"}];
-const legendaryModels=[{name:"Antminer Prisma",power:4200,cost:5500,watts:900,icon:"💎",rarity:"Rara"},{name:"Antminer Titã",power:8500,cost:13000,watts:1450,icon:"🛡️",rarity:"Épica"},{name:"Antminer Fênix",power:16000,cost:31000,watts:2100,icon:"🔥",rarity:"Lendária"}];
-const SLOTS=4,emptyRack=()=>Array(SLOTS).fill(null);
-let game={balance:1000,total:0,inventory:[],racks:[emptyRack(),emptyRack(),emptyRack()],running:false,seconds:0,history:[],cooling:0,claimed:[],metrics:[],dailyLast:"",dailyStreak:0,crateCount:0,batterySeconds:86400,batteriesUsed:1};
-let timer=null,selectedId=null,selectedSlot=null;
-const BATTERY_SECONDS=86400,BATTERY_COST=150;
-const MAX_BATTERY_SECONDS = 7 * BATTERY_SECONDS;
-const $=id=>document.getElementById(id),fmt=n=>Number(n||0).toLocaleString("pt-BR",{maximumFractionDigits:4}),lmt=n=>fmt(n)+" DCK";
-function allMachines(){return game.racks.flat().filter(Boolean)}
-function power(){return allMachines().reduce((a,m)=>a+m.power,0)}
-function watts(){return allMachines().reduce((a,m)=>a+m.watts,0)}
-function temp(){return 25+Math.max(0,watts()*.025-game.cooling*5)}
-function rate(){let heat=temp()>65?Math.max(.2,1-(temp()-65)*.012):1;return power()*.00005*heat}
-function addEvent(s){game.history.unshift(new Date().toLocaleTimeString("pt-BR")+" — "+s);game.history=game.history.slice(0,45);$("events").innerHTML=game.history.map(x=>"<p>"+x+"</p>").join("")}
-function showTab(name){
-  $("extraMenu").open = false;
-  const menuScreen = ["upgrades", "crates"].includes(name) ? "shop" : name;
-  document.querySelectorAll("main section").forEach(section => {
-    section.hidden = section.id !== "tab-" + name;
-  });
-  document.querySelectorAll("#gameMenu button, #extraMenu button").forEach(button => {
-    const active = button.getAttribute("onclick").includes("'" + menuScreen + "'");
-    button.classList.toggle("active", active);
-
-  });
-  if (name === "missions") renderTimedMissions();
-  if (name === "charts") requestAnimationFrame(renderCharts);
-}
-let purchaseNoticeTimer;
-function showPurchase(item, cost){
-  const notice = $("purchaseNotice");
-  clearTimeout(purchaseNoticeTimer);
-  notice.textContent = "✅ Compra confirmada · " + item + " · " + lmt(cost);
-  purchaseNoticeTimer = setTimeout(() => { notice.textContent = ""; }, 4500);
-}
-function buy(i){let m=[...models,...legendaryModels][i];if(game.balance<m.cost)return alert("Saldo insuficiente!");game.balance-=m.cost;countMission("machine");game.inventory.push({...m,rarity:m.rarity||"Comum",id:Date.now()+Math.random(),level:0,baseCost:m.cost});addEvent("Comprou "+m.name);render();save();showPurchase(m.name, m.cost)}
-function dragInventory(e,id){e.dataTransfer.setData("text/plain",JSON.stringify({type:"inventory",id}));e.dataTransfer.effectAllowed="move"}
-function dragRack(e,r,s){e.dataTransfer.setData("text/plain",JSON.stringify({type:"rack",r,s}));e.dataTransfer.effectAllowed="move"}
-function allowDrop(e){e.preventDefault();e.currentTarget.classList.add("over")}
-function dropMachine(e,r,s){e.preventDefault();e.currentTarget.classList.remove("over");let d;try{d=JSON.parse(e.dataTransfer.getData("text/plain"))}catch{return}if(d.type==="inventory")placeInventory(d.id,r,s);else if(d.type==="rack")moveMachine(d.r,d.s,r,s)}
-function placeInventory(id,r,s){let i=game.inventory.findIndex(m=>m.id===id);if(i<0)return;if(game.racks[r][s])return alert("Espaço ocupado!");game.racks[r][s]=game.inventory.splice(i,1)[0];selectedId=null;selectedSlot=null;addEvent("Máquina instalada no Rack "+(r+1));render();save()}
-function moveMachine(r1,s1,r2,s2){if(r1===r2&&s1===s2)return;let m=game.racks[r1][s1];if(!m)return;[game.racks[r1][s1],game.racks[r2][s2]]=[game.racks[r2][s2],m];addEvent("Máquina movida/trocada de posição");render();save()}
-function selectMachine(id){selectedSlot=null;selectedId=id;render()}
-function clickSlot(r,s){
-  if (!game.racks[r][s] && selectedId !== null) {
-    placeInventory(selectedId,r,s);
-    return;
-  }
-  selectedSlot = {r,s};
-  render();
-}
-function installInSelectedSlot(id){
-  if (selectedSlot) placeInventory(id,selectedSlot.r,selectedSlot.s);
-}
-function removeSelectedMachine(){
-  if (!selectedSlot) return;
-  const {r,s} = selectedSlot;
-  const machine = game.racks[r][s];
-  if (!machine) return;
-  game.racks[r][s] = null;
-  game.inventory.push(machine);
-  addEvent("Máquina devolvida ao estoque: " + machine.name);
-  cancelInstallation();
-  save();
-}
-function cancelInstallation(){
-  selectedSlot = null;
-  selectedId = null;
-  render();
-}
-function expandRoom(){let cost=2500+Math.max(0,game.racks.length-3)*2000;if(game.racks.length>=8)return alert("Limite de 8 racks atingido.");if(game.balance<cost)return alert("Saldo insuficiente para expandir.");game.balance-=cost;game.racks.push(emptyRack());addEvent("Novo rack construído por "+lmt(cost));render();save();showPurchase("Novo rack", cost)}
-function buyCooling(){let cost=1200+game.cooling*900;if(game.balance<cost)return alert("Saldo insuficiente.");game.balance-=cost;game.cooling++;addEvent("Sistema de refrigeração melhorado para nível "+game.cooling);render();save();showPurchase("Refrigeração", cost)}
-function upgrade(id){let m=allMachines().find(x=>x.id===id);if(!m)return;let cost=Math.round((m.baseCost||m.cost)*(.55+(m.level||0)*.45));if(game.balance<cost)return alert("Saldo insuficiente.");game.balance-=cost;m.level=(m.level||0)+1;m.power=Math.round(m.power*1.25);m.watts=Math.max(40,Math.round(m.watts*.96));addEvent(m.name+" melhorada para nível "+m.level);render();save();showPurchase("Melhoria de "+m.name, cost)}
-function clearBalance(){
-  if (!confirm("Zerar o saldo da carteira em DCK?")) return;
-  game.balance = 0;
-  addEvent("Saldo da carteira zerado");
-  render();
-  save();
-}
-function addMoney(){let f=$("addMoneyAmount"),n=Math.floor(Number(f.value));if(!Number.isFinite(n)||n<=0)return alert("Digite um valor maior que zero.");game.balance+=n;addEvent("Adicionado saldo de teste: +"+lmt(n));f.value="";render();save()}
-function syncMining(){
-  const canMine = game.batterySeconds > 0 && power() > 0;
-  if (canMine === game.running) return;
-  game.running = canMine;
-  if (canMine) {
-    timer = setInterval(tick, 1000);
-  } else {
-    clearInterval(timer);
-    timer = null;
-  }
-}
-const POOL_SECONDS = 60;
-const POOL_REWARD = 10;
-const RIVAL_POWER = 10000;
-
-function miningGain(seconds){
-
-  let progress = game.poolSeconds || 0;
-  let work = game.poolWork || 0;
-  let gain = 0;
-  while (seconds > 0) {
-    const step = Math.min(seconds, POOL_SECONDS - progress);
-    progress += step;
-    work += power() * step;
-    seconds -= step;
-    if (progress === POOL_SECONDS) {
-      const reward = POOL_REWARD * work / (work + RIVAL_POWER * POOL_SECONDS);
-      game.poolLastReward = reward;
-      gain += reward;
-      progress = 0;
-      work = 0;
-    }
-  }
-  game.poolSeconds = progress;
-  game.poolWork = work;
-  return gain;
-}
-
-function renderPool(){
-  const playerPower = game.running ? power() : 0;
-  const networkPower = playerPower + RIVAL_POWER;
-  const share = 100 * playerPower / networkPower;
-  $("poolNetworkPower").textContent = fmt(networkPower) + " TH/s";
-  $("poolReward").textContent = lmt(POOL_REWARD);
-  const elapsed = game.poolSeconds || 0;
-
-  $("poolYourPower").textContent = fmt(playerPower) + " TH/s";
-  $("poolRivalPower").textContent = fmt(RIVAL_POWER) + " TH/s";
-  $("poolShare").textContent = fmt(share) + "%";
-  $("poolRound").max = POOL_SECONDS;
-  $("poolRound").value = elapsed;
-  $("poolElapsed").textContent = elapsed + " / " + POOL_SECONDS + " s";
-  $("poolLast").textContent = lmt(game.poolLastReward || 0);
-}
-
-function tick(){if(!game.running)return;if(game.batterySeconds<=0){batteryEmpty();return;}let gain=miningGain(1);game.balance+=gain;game.total+=gain;game.seconds++;game.batterySeconds=Math.max(0,game.batterySeconds-1);if(game.batterySeconds===0){batteryEmpty();return;}render();if(game.seconds%15===0)save()}
-function resetPoolRound(){ game.poolSeconds = 0; game.poolWork = 0; }
-function batteryEmpty(){resetPoolRound();if(timer)clearInterval(timer);timer=null;game.running=false;game.batterySeconds=0;addEvent("🔋 Bateria acabou! A mineração parou e não gera mais DCK.");render();save()}
-function buyBattery(){
-  if (game.balance < BATTERY_COST) return alert("Saldo insuficiente para comprar uma bateria.");
-  game.balance -= BATTERY_COST;
-  game.batteryReserve = (game.batteryReserve || 0) + 1;
-  game.batteriesUsed++;
-  addEvent("🔋 Bateria comprada e guardada na reserva");
-  render();
-  save();
-  showPurchase("Bateria (+24 h)", BATTERY_COST);
-}
-function clearBattery(){
-  if (game.batterySeconds <= 0 || !confirm("Zerar a carga atual da bateria?")) return;
-  game.batterySeconds = 0;
-  resetPoolRound();
-  addEvent("🔋 Carga da bateria zerada");
-  render();
-  save();
-}
-function rechargeBattery(){
-  if (!game.batteryReserve || game.batterySeconds + BATTERY_SECONDS > MAX_BATTERY_SECONDS) return;
-  game.batteryReserve--;countMission("battery");
-  game.batterySeconds += BATTERY_SECONDS;
-  addEvent("🔋 Bateria recarregada: +24 horas de mineração");
-  render();
-  save();
-}
-function save(show=false){try{localStorage.setItem("limercoinRoom",JSON.stringify({...game,running:false,savedAt:Date.now()}));if(show)alert("Jogo salvo neste navegador!")}catch(e){if(show)alert("O navegador bloqueou o salvamento local.")}}
-function load(){try{let d=JSON.parse(localStorage.getItem("limercoinRoom"));if(d)game={...game,...d,running:false};if(!Array.isArray(game.racks)||!game.racks.length)game.racks=[emptyRack(),emptyRack(),emptyRack()];game.racks=game.racks.map(r=>Array.from({length:SLOTS},(_,i)=>r[i]||null));if(!Number.isFinite(game.lmtHoldings))game.lmtHoldings=0;if(!Number.isFinite(game.lmtPrice))game.lmtPrice=1;if(!Number.isFinite(game.lmtPrevious))game.lmtPrevious=1;if(!Array.isArray(game.exchangeHistory))game.exchangeHistory=[];if(!Array.isArray(game.claimed))game.claimed=[];if(!Array.isArray(game.history))game.history=[];if(!Array.isArray(game.market))game.market=[];if(!Array.isArray(game.inventory))game.inventory=[];if(!Array.isArray(game.metrics))game.metrics=[];if(typeof game.dailyLast!=="string")game.dailyLast="";if(!Number.isFinite(game.dailyStreak))game.dailyStreak=0;if(!Number.isFinite(game.crateCount))game.crateCount=0;if(!Number.isFinite(game.batterySeconds))game.batterySeconds=BATTERY_SECONDS;if(!Number.isFinite(game.batteriesUsed))game.batteriesUsed=1;}catch(e){}}
-function resetGame(){if(!confirm("Apagar todo o progresso salvo?"))return;clearInterval(timer);timer=null;try{localStorage.removeItem("limercoinRoom")}catch(e){}game={balance:1000,total:0,inventory:[],racks:[emptyRack(),emptyRack(),emptyRack()],running:false,seconds:0,history:[],cooling:0,claimed:[],metrics:[],dailyLast:"",dailyStreak:0,crateCount:0,batterySeconds:86400,batteriesUsed:1};selectedId=null;selectedSlot=null;addEvent("Novo jogo iniciado");render();renderExchangeHistory();save()}
-const timedMissions = {
-  daily: [["machine","Compre uma máquina",1,75],["battery","Recarregue a bateria",1,50]],
-  weekly: [["machine","Compre três máquinas",3,250],["battery","Recarregue a bateria três vezes",3,200],["crate","Abra duas caixas",2,250]]
-};
-function timedProgress(period){
-  const date = new Date();
-  if (period === "weekly") date.setDate(date.getDate() - (date.getDay()+6)%7);
-  const key = localDay(date);
-  game.timedMissions ||= {};
-  if (game.timedMissions[period]?.key !== key) {
-    game.timedMissions[period] = {key, counts:{}, claimed:{}};
-  }
-  return game.timedMissions[period];
-}
-function countMission(action){
-  for (const period of Object.keys(timedMissions)) {
-    const {counts} = timedProgress(period);
-    counts[action] = (counts[action] || 0) + 1;
-  }
-}
-function claimTimedMission(period, index){
-  const [action,title,target,reward] = timedMissions[period][index];
-  const {counts,claimed} = timedProgress(period);
-  if (claimed[action] || (counts[action] || 0) < target) return;
-  claimed[action] = true;
-  game.balance += reward;
-  addEvent("Missão resgatada: " + title + " · +" + lmt(reward));
-  render();
-  save();
-}
-function openTimedMissions(){
-  renderTimedMissions();
-  $("timedMissionDialog").showModal();
-}
-function renderTimedMissions(){
-  $("roomMissionSummary").innerHTML = Object.entries(timedMissions).map(([period, missions]) => {
-    const {counts, claimed} = timedProgress(period);
-    const title = period === "daily" ? "📅 Diárias" : "🗓️ Semanais";
-    const items = missions.map(([action, label, target]) =>
-      `<li><span>${label}</span> <strong>${claimed[action] ? "✓" : Math.min(target, counts[action] || 0) + "/" + target}</strong></li>`
-    ).join("");
-    return `<div class="room-mission-group"><h3>${title}</h3><ul>${items}</ul></div>`;
-  }).join("");
-
-  for (const [period, missions] of Object.entries(timedMissions)) {
-    const {counts,claimed} = timedProgress(period);
-    $(period + "Missions").innerHTML = missions.map(([action,title,target,reward], index) => {
-      const count = Math.min(target, counts[action] || 0);
-      return `<div class="mission"><b>${title}</b><p>${count}/${target} · ${lmt(reward)}</p><button onclick="claimTimedMission('${period}',${index})" ${claimed[action] || count < target ? "disabled" : ""}>${claimed[action] ? "Resgatada" : "Resgatar"}</button></div>`;
-    }).join("");
-  }
-}
-function render(){
-  renderTimedMissions();
-  $("walletCoins").textContent = "Saldo: " + lmt(game.balance);
-syncMining();
-$("balance").textContent=lmt(game.balance);$("total").textContent=lmt(game.total);$("energy").textContent=watts()+" W";
-$("roomInfo").textContent=allMachines().length+" máquinas instaladas • "+game.racks.length+" racks • "+game.racks.length*SLOTS+" espaços totais • temperatura "+temp().toFixed(1)+" °C";
-$("rackPrice").textContent="Próximo rack: "+lmt(2500+Math.max(0,game.racks.length-3)*2000);
-$("online").textContent=new Date(game.seconds*1000).toISOString().slice(11,19);
-$("racks").innerHTML=game.racks.map((rack,r)=>`<div class="rack"><h3>RACK ${r+1}</h3><div class="slots">${rack.map((m,s)=>`<div class="slot ${m?"filled":""}" ondragover="allowDrop(event)" ondragleave="this.classList.remove('over')" ondrop="dropMachine(event,${r},${s})" onclick="clickSlot(${r},${s})">${m?`<div draggable="true" ondragstart="dragRack(event,${r},${s})"><span class="machine-icon">${m.icon}</span><b>${m.name} • ${m.rarity||"Comum"} • Nv.${m.level||0}</b><small>${m.power} TH/s • ${m.watts} W</small><small>Arraste para mover</small></div>`:`<span>＋ ESPAÇO VAZIO<small>Rack ${r+1} • Slot ${s+1}</small></span>`}</div>`).join("")}</div></div>`).join("");
-$("shop").innerHTML=[...models,...legendaryModels].map((m,i)=>`<div class="machine"><div class="icon">${m.icon}</div><h3>${m.name}</h3><p class="pill">${m.rarity||"Comum"}</p><p class="pill">${m.power} TH/s</p><p>Consumo: ${m.watts} W</p><p>Preço: <b>${lmt(m.cost)}</b></p><button onclick="buy(${i})">Comprar máquina</button></div>`).join("");
-$("inventory").innerHTML=game.inventory.length?game.inventory.map(m=>`<div class="inventory-item" draggable="true" ondragstart="dragInventory(event,${m.id})"><span>${m.icon} <b>${m.name}</b><small class="muted">${m.power} TH/s • ${m.watts} W • Nv.${m.level||0}</small></span><span class="row"><button onclick="selectMachine(${m.id})">Selecionar / instalar</button></span></div>`).join(""):"Nenhuma máquina no estoque.";
-const picker = $("machinePicker");
-const cancelButton = '<button class="secondary" onclick="cancelInstallation()">Cancelar</button>';
-if (selectedSlot) {
-  const {r,s} = selectedSlot;
-  const choices = game.inventory.map(m =>
-    `<button onclick="installInSelectedSlot(${m.id})">${m.icon} ${m.name} • ${m.power} TH/s</button>`
-  ).join("");
-  const installed = game.racks[r][s];
-  if (!picker.open) $("machineChoices").innerHTML = installed
-    ? `<p>Rack ${r+1}, espaço ${s+1} — máquina instalada</p><button onclick="removeSelectedMachine()">Tirar máquina e devolver ao estoque</button>`
-    : `<p>Rack ${r+1}, espaço ${s+1} — escolha uma máquina</p><div class="row">${choices || "Nenhuma máquina no estoque. Compre uma na Loja."} </div>`;
-  if (!picker.open) picker.showModal();
-} else {
-  if (picker.open) picker.close();
-  $("selection").innerHTML = selectedId !== null
-    ? `<p class="pill">Máquina selecionada — toque em um slot vazio. ${cancelButton}</p>`
-    : "";
-}
-$("upgradeList").innerHTML=allMachines().length?allMachines().map(m=>`<div class="inventory-item"><span>${m.icon} <b>${m.name}</b><small class="muted">Nível ${m.level||0} • ${m.power} TH/s • ${m.watts} W</small></span><button onclick="upgrade(${m.id})">Melhorar (${lmt(Math.round((m.baseCost||m.cost)*(.55+(m.level||0)*.45)))})</button></div>`).join(""):"Instale máquinas para melhorá-las.";
-let defs=[["Primeira máquina",allMachines().length>=1,300],["Pequena fazenda",allMachines().length>=4,800],["Poder de 1.000 TH/s",power()>=1000,700],["Poder de 5.000 TH/s",power()>=5000,1800],["Primeiros 100 DCK minerados",game.total>=100,500],["10 horas online",game.seconds>=36000,1200],["Sala expandida",game.racks.length>3,1000]];
-$("missions").innerHTML=defs.map(([name,ok,reward],i)=>`<div class="mission"><b>${ok?"✅":"🎯"} ${name}</b><p class="muted">Recompensa: ${lmt(reward)}</p><button ${!ok||game.claimed.includes(i)?"disabled":""} onclick="claim(${i},${reward})">${game.claimed.includes(i)?"Resgatada":ok?"Resgatar":"Em andamento"}</button></div>`).join("");
-renderRanking();renderDaily();renderBattery();renderPool();$("events").innerHTML=game.history.map(x=>"<p>"+x+"</p>").join("")||"Bem-vindo à sua sala!";
-}
-function claim(i,reward){if(game.claimed.includes(i))return;game.claimed.push(i);game.balance+=reward;addEvent("Conquista resgatada: +"+lmt(reward));render();save()}
-const rivals=[{name:"Crypto Norte",power:1800},{name:"HashPower Brasil",power:4200},{name:"MegaBlock Mining",power:7600},{name:"BitFazenda",power:950},{name:"Digital Hash Corp.",power:12500}];
-function collectOfflineMining(){
-  if (!Number.isFinite(game.savedAt) || power() <= 0) return;
-  const elapsed = Math.max(0, Math.floor((Date.now() - game.savedAt) / 1000));
-  const activeSeconds = Math.min(elapsed, game.batterySeconds);
-  if (activeSeconds <= 0) return;
-  const gain = miningGain(activeSeconds);
-  game.balance += gain;
-  game.total += gain;
-  game.seconds += activeSeconds;
-  game.batterySeconds -= activeSeconds;
-  if (game.batterySeconds === 0) resetPoolRound();
-  addEvent("Mineração enquanto você esteve fora: +" + lmt(gain));
-  save();
-}
-
-
-function renderBattery(){$("clearBattery").disabled = game.batterySeconds <= 0;const reserve = game.batteryReserve || 0;$("batteryReserve").textContent = reserve ? "" : "Compre baterias na Loja.";const canFit = game.batterySeconds + BATTERY_SECONDS <= MAX_BATTERY_SECONDS;$("rechargeBattery").disabled = reserve === 0 || !canFit;if (reserve && !canFit) $("batteryReserve").textContent = "Aguarde até caber mais 24 h (limite de 7 dias).";let n=Math.max(0,Math.floor(game.batterySeconds));const days=Math.floor(n/BATTERY_SECONDS),hours=Math.floor(n%BATTERY_SECONDS/3600),minutes=Math.floor(n%3600/60);$("batteryTime").textContent=days+"d "+String(hours).padStart(2,"0")+"h "+String(minutes).padStart(2,"0")+"m";$("batteryCount").textContent=reserve;$("batteryBar").querySelectorAll("span").forEach((day,index)=>{const fill=Math.min(100,Math.max(0,(n/BATTERY_SECONDS-index)*100));day.style.setProperty("--charge",fill+"%")});$("batteryBar").setAttribute("aria-label","Carga restante: "+$("batteryTime").textContent+" em uma escala de sete dias");$("batteryStatus").textContent=n===0?"🔴 Sem carga. Recarregue para voltar a minerar.":game.running?"🟢 Bateria em uso.":"🟡 Instale uma máquina para começar a minerar.";}
-function renderRanking(){let list=[...rivals.map((r,i)=>({name:r.name,power:Math.round(r.power*(1+Math.floor(game.seconds/120)*.015)),mine:false})),{name:"Minha Empresa",power:power(),mine:true}].sort((a,b)=>b.power-a.power);$("rankingList").innerHTML=list.map((r,i)=>`<div class="inventory-item"><b>#${i+1} ${r.mine?"👑 ":"🏢 "}${r.name}</b><span>${fmt(r.power)} TH/s ${r.mine?"• VOCÊ":""}</span></div>`).join("");}
-
-function recordMetrics(){if(!Array.isArray(game.metrics))game.metrics=[];game.metrics.push({time:Date.now(),balance:game.balance,power:power(),mined:game.total,watts:watts()});game.metrics=game.metrics.slice(-160);save()}
-function drawChart(id,key){const c=$(id);if(!c)return;const w=Math.max(260,c.clientWidth||400),hh=190,dpr=window.devicePixelRatio||1;c.width=Math.round(w*dpr);c.height=Math.round(hh*dpr);const x=c.getContext('2d');x.scale(dpr,dpr);x.strokeStyle='#344b63';x.lineWidth=1;for(let i=0;i<=4;i++){let y=12+i*39;x.beginPath();x.moveTo(45,y);x.lineTo(w-8,y);x.stroke()}const pts=(game.metrics||[]).map(m=>Number(m[key])||0);x.fillStyle='#b8cbdb';x.font='11px Arial';if(!pts.length){x.fillText('Aguardando dados',50,90);return}let lo=Math.min(...pts),hi=Math.max(...pts);if(lo===hi){lo=Math.max(0,lo-1);hi+=1}x.fillText(fmt(hi),2,16);x.fillText(fmt(lo),2,170);x.strokeStyle='#43e6a0';x.lineWidth=2;x.beginPath();pts.forEach((v,i)=>{let px=47+(pts.length===1?.5:i/(pts.length-1))*(w-60),py=12+(hi-v)/(hi-lo)*156;i?x.lineTo(px,py):x.moveTo(px,py)});x.stroke();x.fillText(pts.length+' amostras',w-90,185)}
-function renderCharts(){if($("tab-charts").hidden)return;drawChart('chartBalance','balance');drawChart('chartPower','power');drawChart('chartMined','mined');drawChart('chartWatts','watts')}
-function localDay(d=new Date()){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
-function ordinal(s){let [y,m,d]=s.split('-').map(Number);return Math.floor(Date.UTC(y,m-1,d)/86400000)}
-function nextStreak(){if(!game.dailyLast)return 1;let delta=ordinal(localDay())-ordinal(game.dailyLast);return delta===1?game.dailyStreak+1:delta===0?game.dailyStreak:1}
-function renderDaily(){if(!$("dailyStreak"))return;let claimed=game.dailyLast===localDay(),streak=nextStreak();$("dailyStreak").textContent=game.dailyStreak+' dia(s)';$("dailyReward").textContent=lmt(200+Math.min(6,streak-1)*100);$("dailyStatus").textContent=claimed?'Recompensa de hoje já resgatada. Volte amanhã!':'Recompensa disponível.';$("dailyButton").disabled=claimed}
-function claimDaily(){if(game.dailyLast===localDay())return alert('Já resgatou hoje.');let streak=nextStreak(),reward=200+Math.min(6,streak-1)*100;game.dailyLast=localDay();game.dailyStreak=streak;game.balance+=reward;addEvent('Recompensa diária: +'+lmt(reward));render();save()}
-function openCrate(premium){let cost=premium?2000:250;if(game.balance<cost)return alert('Saldo insuficiente.');let weights=premium?[30,45,20,5]:[75,20,4,1],roll=Math.random()*100,idx=0;while(idx<3&&roll>=weights[idx]){roll-=weights[idx];idx++}let rarity=['Comum','Rara','Épica','Lendária'][idx],pool=idx===3?[legendaryModels[2]]:idx===2?[legendaryModels[1]]:idx===1?[models[2],models[3],legendaryModels[0]]:models;let base=pool[Math.floor(Math.random()*pool.length)],m={...base,id:Date.now()+Math.random(),rarity,level:0,baseCost:base.cost};game.balance-=cost;game.inventory.push(m);game.crateCount++;countMission("crate");$("crateResult").textContent=`🎉 ${m.icon} ${m.name} — ${rarity} — ${fmt(m.power)} TH/s. Enviada ao estoque!`;addEvent('Caixa: '+m.name+' ('+rarity+')');render();save();showPurchase(premium ? "Caixa Premium" : "Caixa Básica", cost)}
-
-
-function renderExchangeHistory(){
-  const history = game.walletHistory || [];
-  $("exchangeProgress").textContent = fmt(game.walletExchangeCount || 0)
-    + " troca(s) concluída(s) · " + lmt(game.walletExchangeTotal || 0) + " recebidos";
-  $("exchangeEmpty").hidden = history.length > 0;
-  const entries = history.map(({at, units}) => {
-    const item = document.createElement("li");
-    item.textContent = new Date(at).toLocaleString("pt-BR") + " · "
-      + fmt(units / 1000) + " XMR de teste → " + lmt(units);
-    return item;
-  });
-  $("walletHistory").replaceChildren(...entries);
-}
-
-function addTestXmr(){
-  game.testXmrUnits = (game.testXmrUnits || 0) + 1000;
-  $("exchangeStatus").textContent = "1 XMR de teste adicionado.";
-  render();
-  save();
-}
-
-</script><script src="online.js"></script><script src="deposits.js"></script></body></html>
+</div></section></main>
+<script>
+const models=[
+{name:"Antminer Básica",power:100,cost:125,watts:100,icon:"🖥️"},
+{name:"Antminer Avançada",power:500,cost:450,watts:250,icon:"💻"},
+{name:"Antminer Profissional",power:1000,cost:1250,watts:450,icon:"⚙️"},
+{name:"Antminer Ultra",power:2500,cost:2750,watts:800,icon:"🚀"}];
+const legendaryModels=[{name:"Antminer Prisma",power:4200,cost:5500,watts:900,icon:"💎",rarity:"Rara"},{name:"Antminer Titã",power:8500,cost:13000,watts:1450,icon:"🛡️",rarity:"Épica"},{name:"Antminer Fênix",power:16000,cost:31000,watts:2100,icon:"🔥",rarity:"Lendária"}];
+const SLOTS=4,emptyRack=()=>Array(SLOTS).fill(null);
+let game={balance:1000,total:0,inventory:[],racks:[emptyRack(),emptyRack(),emptyRack()],running:false,seconds:0,history:[],cooling:0,claimed:[],metrics:[],dailyLast:"",dailyStreak:0,crateCount:0,batterySeconds:86400,batteriesUsed:1};
+let timer=null,selectedId=null,selectedSlot=null;
+const BATTERY_SECONDS=86400,BATTERY_COST=150;
+const MAX_BATTERY_SECONDS = 7 * BATTERY_SECONDS;
+const $=id=>document.getElementById(id),fmt=n=>Number(n||0).toLocaleString("pt-BR",{maximumFractionDigits:4}),lmt=n=>fmt(n)+" DCK";
+function allMachines(){return game.racks.flat().filter(Boolean)}
+function power(){return allMachines().reduce((a,m)=>a+m.power,0)}
+function watts(){return allMachines().reduce((a,m)=>a+m.watts,0)}
+function temp(){return 25+Math.max(0,watts()*.025-game.cooling*5)}
+function rate(){let heat=temp()>65?Math.max(.2,1-(temp()-65)*.012):1;return power()*.00005*heat}
+function addEvent(s){game.history.unshift(new Date().toLocaleTimeString("pt-BR")+" — "+s);game.history=game.history.slice(0,45);$("events").innerHTML=game.history.map(x=>"<p>"+x+"</p>").join("")}
+function showTab(name){
+  $("extraMenu").open = false;
+  const menuScreen = ["upgrades", "crates"].includes(name) ? "shop" : name;
+  document.querySelectorAll("main section").forEach(section => {
+    section.hidden = section.id !== "tab-" + name;
+  });
+  document.querySelectorAll("#gameMenu button, #extraMenu button").forEach(button => {
+    const active = button.getAttribute("onclick").includes("'" + menuScreen + "'");
+    button.classList.toggle("active", active);
+
+  });
+  if (name === "missions") renderTimedMissions();
+  if (name === "charts") requestAnimationFrame(renderCharts);
+}
+let purchaseNoticeTimer;
+function showPurchase(item, cost){
+  const notice = $("purchaseNotice");
+  clearTimeout(purchaseNoticeTimer);
+  notice.textContent = "✅ Compra confirmada · " + item + " · " + lmt(cost);
+  purchaseNoticeTimer = setTimeout(() => { notice.textContent = ""; }, 4500);
+}
+function buy(i){let m=[...models,...legendaryModels][i];if(game.balance<m.cost)return alert("Saldo insuficiente!");game.balance-=m.cost;countMission("machine");game.inventory.push({...m,rarity:m.rarity||"Comum",id:Date.now()+Math.random(),level:0,baseCost:m.cost});addEvent("Comprou "+m.name);render();save();showPurchase(m.name, m.cost)}
+function dragInventory(e,id){e.dataTransfer.setData("text/plain",JSON.stringify({type:"inventory",id}));e.dataTransfer.effectAllowed="move"}
+function dragRack(e,r,s){e.dataTransfer.setData("text/plain",JSON.stringify({type:"rack",r,s}));e.dataTransfer.effectAllowed="move"}
+function allowDrop(e){e.preventDefault();e.currentTarget.classList.add("over")}
+function dropMachine(e,r,s){e.preventDefault();e.currentTarget.classList.remove("over");let d;try{d=JSON.parse(e.dataTransfer.getData("text/plain"))}catch{return}if(d.type==="inventory")placeInventory(d.id,r,s);else if(d.type==="rack")moveMachine(d.r,d.s,r,s)}
+function placeInventory(id,r,s){let i=game.inventory.findIndex(m=>m.id===id);if(i<0)return;if(game.racks[r][s])return alert("Espaço ocupado!");game.racks[r][s]=game.inventory.splice(i,1)[0];selectedId=null;selectedSlot=null;addEvent("Máquina instalada no Rack "+(r+1));render();save()}
+function moveMachine(r1,s1,r2,s2){if(r1===r2&&s1===s2)return;let m=game.racks[r1][s1];if(!m)return;[game.racks[r1][s1],game.racks[r2][s2]]=[game.racks[r2][s2],m];addEvent("Máquina movida/trocada de posição");render();save()}
+function selectMachine(id){selectedSlot=null;selectedId=id;render()}
+function clickSlot(r,s){
+  if (!game.racks[r][s] && selectedId !== null) {
+    placeInventory(selectedId,r,s);
+    return;
+  }
+  selectedSlot = {r,s};
+  render();
+}
+function installInSelectedSlot(id){
+  if (selectedSlot) placeInventory(id,selectedSlot.r,selectedSlot.s);
+}
+function removeSelectedMachine(){
+  if (!selectedSlot) return;
+  const {r,s} = selectedSlot;
+  const machine = game.racks[r][s];
+  if (!machine) return;
+  game.racks[r][s] = null;
+  game.inventory.push(machine);
+  addEvent("Máquina devolvida ao estoque: " + machine.name);
+  cancelInstallation();
+  save();
+}
+function cancelInstallation(){
+  selectedSlot = null;
+  selectedId = null;
+  render();
+}
+function expandRoom(){let cost=2500+Math.max(0,game.racks.length-3)*2000;if(game.racks.length>=8)return alert("Limite de 8 racks atingido.");if(game.balance<cost)return alert("Saldo insuficiente para expandir.");game.balance-=cost;game.racks.push(emptyRack());addEvent("Novo rack construído por "+lmt(cost));render();save();showPurchase("Novo rack", cost)}
+function buyCooling(){let cost=1200+game.cooling*900;if(game.balance<cost)return alert("Saldo insuficiente.");game.balance-=cost;game.cooling++;addEvent("Sistema de refrigeração melhorado para nível "+game.cooling);render();save();showPurchase("Refrigeração", cost)}
+function upgrade(id){let m=allMachines().find(x=>x.id===id);if(!m)return;let cost=Math.round((m.baseCost||m.cost)*(.55+(m.level||0)*.45));if(game.balance<cost)return alert("Saldo insuficiente.");game.balance-=cost;m.level=(m.level||0)+1;m.power=Math.round(m.power*1.25);m.watts=Math.max(40,Math.round(m.watts*.96));addEvent(m.name+" melhorada para nível "+m.level);render();save();showPurchase("Melhoria de "+m.name, cost)}
+function clearBalance(){
+  if (!confirm("Zerar o saldo da carteira em DCK?")) return;
+  game.balance = 0;
+  addEvent("Saldo da carteira zerado");
+  render();
+  save();
+}
+function addMoney(){let f=$("addMoneyAmount"),n=Math.floor(Number(f.value));if(!Number.isFinite(n)||n<=0)return alert("Digite um valor maior que zero.");game.balance+=n;addEvent("Adicionado saldo de teste: +"+lmt(n));f.value="";render();save()}
+function syncMining(){
+  const canMine = game.batterySeconds > 0 && power() > 0;
+  if (canMine === game.running) return;
+  game.running = canMine;
+  if (canMine) {
+    timer = setInterval(tick, 1000);
+  } else {
+    clearInterval(timer);
+    timer = null;
+  }
+}
+const POOL_SECONDS = 60;
+const POOL_REWARD = 10;
+const RIVAL_POWER = 10000;
+
+function miningGain(seconds){
+
+  let progress = game.poolSeconds || 0;
+  let work = game.poolWork || 0;
+  let gain = 0;
+  while (seconds > 0) {
+    const step = Math.min(seconds, POOL_SECONDS - progress);
+    progress += step;
+    work += power() * step;
+    seconds -= step;
+    if (progress === POOL_SECONDS) {
+      const reward = POOL_REWARD * work / (work + RIVAL_POWER * POOL_SECONDS);
+      game.poolLastReward = reward;
+      gain += reward;
+      progress = 0;
+      work = 0;
+    }
+  }
+  game.poolSeconds = progress;
+  game.poolWork = work;
+  return gain;
+}
+
+function renderPool(){
+  const playerPower = game.running ? power() : 0;
+  const networkPower = playerPower + RIVAL_POWER;
+  const share = 100 * playerPower / networkPower;
+  $("poolNetworkPower").textContent = fmt(networkPower) + " TH/s";
+  $("poolReward").textContent = lmt(POOL_REWARD);
+  const elapsed = game.poolSeconds || 0;
+
+  $("poolYourPower").textContent = fmt(playerPower) + " TH/s";
+  $("poolRivalPower").textContent = fmt(RIVAL_POWER) + " TH/s";
+  $("poolShare").textContent = fmt(share) + "%";
+  $("poolRound").max = POOL_SECONDS;
+  $("poolRound").value = elapsed;
+  $("poolElapsed").textContent = elapsed + " / " + POOL_SECONDS + " s";
+  $("poolLast").textContent = lmt(game.poolLastReward || 0);
+}
+
+function tick(){if(!game.running)return;if(game.batterySeconds<=0){batteryEmpty();return;}let gain=miningGain(1);game.balance+=gain;game.total+=gain;game.seconds++;game.batterySeconds=Math.max(0,game.batterySeconds-1);if(game.batterySeconds===0){batteryEmpty();return;}render();if(game.seconds%15===0)save()}
+function resetPoolRound(){ game.poolSeconds = 0; game.poolWork = 0; }
+function batteryEmpty(){resetPoolRound();if(timer)clearInterval(timer);timer=null;game.running=false;game.batterySeconds=0;addEvent("🔋 Bateria acabou! A mineração parou e não gera mais DCK.");render();save()}
+function buyBattery(){
+  if (game.balance < BATTERY_COST) return alert("Saldo insuficiente para comprar uma bateria.");
+  game.balance -= BATTERY_COST;
+  game.batteryReserve = (game.batteryReserve || 0) + 1;
+  game.batteriesUsed++;
+  addEvent("🔋 Bateria comprada e guardada na reserva");
+  render();
+  save();
+  showPurchase("Bateria (+24 h)", BATTERY_COST);
+}
+function clearBattery(){
+  if (game.batterySeconds <= 0 || !confirm("Zerar a carga atual da bateria?")) return;
+  game.batterySeconds = 0;
+  resetPoolRound();
+  addEvent("🔋 Carga da bateria zerada");
+  render();
+  save();
+}
+function rechargeBattery(){
+  if (!game.batteryReserve || game.batterySeconds + BATTERY_SECONDS > MAX_BATTERY_SECONDS) return;
+  game.batteryReserve--;countMission("battery");
+  game.batterySeconds += BATTERY_SECONDS;
+  addEvent("🔋 Bateria recarregada: +24 horas de mineração");
+  render();
+  save();
+}
+function save(show=false){try{localStorage.setItem("limercoinRoom",JSON.stringify({...game,running:false,savedAt:Date.now()}));if(show)alert("Jogo salvo neste navegador!")}catch(e){if(show)alert("O navegador bloqueou o salvamento local.")}}
+function load(){try{let d=JSON.parse(localStorage.getItem("limercoinRoom"));if(d)game={...game,...d,running:false};if(!Array.isArray(game.racks)||!game.racks.length)game.racks=[emptyRack(),emptyRack(),emptyRack()];game.racks=game.racks.map(r=>Array.from({length:SLOTS},(_,i)=>r[i]||null));if(!Number.isFinite(game.lmtHoldings))game.lmtHoldings=0;if(!Number.isFinite(game.lmtPrice))game.lmtPrice=1;if(!Number.isFinite(game.lmtPrevious))game.lmtPrevious=1;if(!Array.isArray(game.exchangeHistory))game.exchangeHistory=[];if(!Array.isArray(game.claimed))game.claimed=[];if(!Array.isArray(game.history))game.history=[];if(!Array.isArray(game.market))game.market=[];if(!Array.isArray(game.inventory))game.inventory=[];if(!Array.isArray(game.metrics))game.metrics=[];if(typeof game.dailyLast!=="string")game.dailyLast="";if(!Number.isFinite(game.dailyStreak))game.dailyStreak=0;if(!Number.isFinite(game.crateCount))game.crateCount=0;if(!Number.isFinite(game.batterySeconds))game.batterySeconds=BATTERY_SECONDS;if(!Number.isFinite(game.batteriesUsed))game.batteriesUsed=1;}catch(e){}}
+function resetGame(){if(!confirm("Apagar todo o progresso salvo?"))return;clearInterval(timer);timer=null;try{localStorage.removeItem("limercoinRoom")}catch(e){}game={balance:1000,total:0,inventory:[],racks:[emptyRack(),emptyRack(),emptyRack()],running:false,seconds:0,history:[],cooling:0,claimed:[],metrics:[],dailyLast:"",dailyStreak:0,crateCount:0,batterySeconds:86400,batteriesUsed:1};selectedId=null;selectedSlot=null;addEvent("Novo jogo iniciado");render();renderExchangeHistory();save()}
+const timedMissions = {
+  daily: [["machine","Compre uma máquina",1,75],["battery","Recarregue a bateria",1,50]],
+  weekly: [["machine","Compre três máquinas",3,250],["battery","Recarregue a bateria três vezes",3,200],["crate","Abra duas caixas",2,250]]
+};
+function timedProgress(period){
+  const date = new Date();
+  if (period === "weekly") date.setDate(date.getDate() - (date.getDay()+6)%7);
+  const key = localDay(date);
+  game.timedMissions ||= {};
+  if (game.timedMissions[period]?.key !== key) {
+    game.timedMissions[period] = {key, counts:{}, claimed:{}};
+  }
+  return game.timedMissions[period];
+}
+function countMission(action){
+  for (const period of Object.keys(timedMissions)) {
+    const {counts} = timedProgress(period);
+    counts[action] = (counts[action] || 0) + 1;
+  }
+}
+function claimTimedMission(period, index){
+  const [action,title,target,reward] = timedMissions[period][index];
+  const {counts,claimed} = timedProgress(period);
+  if (claimed[action] || (counts[action] || 0) < target) return;
+  claimed[action] = true;
+  game.balance += reward;
+  addEvent("Missão resgatada: " + title + " · +" + lmt(reward));
+  render();
+  save();
+}
+function openTimedMissions(){
+  renderTimedMissions();
+  $("timedMissionDialog").showModal();
+}
+function renderTimedMissions(){
+  $("roomMissionSummary").innerHTML = Object.entries(timedMissions).map(([period, missions]) => {
+    const {counts, claimed} = timedProgress(period);
+    const title = period === "daily" ? "📅 Diárias" : "🗓️ Semanais";
+    const items = missions.map(([action, label, target]) =>
+      `<li><span>${label}</span> <strong>${claimed[action] ? "✓" : Math.min(target, counts[action] || 0) + "/" + target}</strong></li>`
+    ).join("");
+    return `<div class="room-mission-group"><h3>${title}</h3><ul>${items}</ul></div>`;
+  }).join("");
+
+  for (const [period, missions] of Object.entries(timedMissions)) {
+    const {counts,claimed} = timedProgress(period);
+    $(period + "Missions").innerHTML = missions.map(([action,title,target,reward], index) => {
+      const count = Math.min(target, counts[action] || 0);
+      return `<div class="mission"><b>${title}</b><p>${count}/${target} · ${lmt(reward)}</p><button onclick="claimTimedMission('${period}',${index})" ${claimed[action] || count < target ? "disabled" : ""}>${claimed[action] ? "Resgatada" : "Resgatar"}</button></div>`;
+    }).join("");
+  }
+}
+function render(){
+  renderTimedMissions();
+  $("walletCoins").textContent = "Saldo: " + lmt(game.balance);
+syncMining();
+$("balance").textContent=lmt(game.balance);$("total").textContent=lmt(game.total);$("energy").textContent=watts()+" W";
+$("roomInfo").textContent=allMachines().length+" máquinas instaladas • "+game.racks.length+" racks • "+game.racks.length*SLOTS+" espaços totais • temperatura "+temp().toFixed(1)+" °C";
+$("rackPrice").textContent="Próximo rack: "+lmt(2500+Math.max(0,game.racks.length-3)*2000);
+$("online").textContent=new Date(game.seconds*1000).toISOString().slice(11,19);
+$("racks").innerHTML=game.racks.map((rack,r)=>`<div class="rack"><h3>RACK ${r+1}</h3><div class="slots">${rack.map((m,s)=>`<div class="slot ${m?"filled":""}" ondragover="allowDrop(event)" ondragleave="this.classList.remove('over')" ondrop="dropMachine(event,${r},${s})" onclick="clickSlot(${r},${s})">${m?`<div draggable="true" ondragstart="dragRack(event,${r},${s})"><span class="machine-icon">${m.icon}</span><b>${m.name} • ${m.rarity||"Comum"} • Nv.${m.level||0}</b><small>${m.power} TH/s • ${m.watts} W</small><small>Arraste para mover</small></div>`:`<span>＋ ESPAÇO VAZIO<small>Rack ${r+1} • Slot ${s+1}</small></span>`}</div>`).join("")}</div></div>`).join("");
+$("shop").innerHTML=[...models,...legendaryModels].map((m,i)=>`<div class="machine"><div class="icon">${m.icon}</div><h3>${m.name}</h3><p class="pill">${m.rarity||"Comum"}</p><p class="pill">${m.power} TH/s</p><p>Consumo: ${m.watts} W</p><p>Preço: <b>${lmt(m.cost)}</b></p><button onclick="buy(${i})">Comprar máquina</button></div>`).join("");
+$("inventory").innerHTML=game.inventory.length?game.inventory.map(m=>`<div class="inventory-item" draggable="true" ondragstart="dragInventory(event,${m.id})"><span>${m.icon} <b>${m.name}</b><small class="muted">${m.power} TH/s • ${m.watts} W • Nv.${m.level||0}</small></span><span class="row"><button onclick="selectMachine(${m.id})">Selecionar / instalar</button></span></div>`).join(""):"Nenhuma máquina no estoque.";
+const picker = $("machinePicker");
+const cancelButton = '<button class="secondary" onclick="cancelInstallation()">Cancelar</button>';
+if (selectedSlot) {
+  const {r,s} = selectedSlot;
+  const choices = game.inventory.map(m =>
+    `<button onclick="installInSelectedSlot(${m.id})">${m.icon} ${m.name} • ${m.power} TH/s</button>`
+  ).join("");
+  const installed = game.racks[r][s];
+  if (!picker.open) $("machineChoices").innerHTML = installed
+    ? `<p>Rack ${r+1}, espaço ${s+1} — máquina instalada</p><button onclick="removeSelectedMachine()">Tirar máquina e devolver ao estoque</button>`
+    : `<p>Rack ${r+1}, espaço ${s+1} — escolha uma máquina</p><div class="row">${choices || "Nenhuma máquina no estoque. Compre uma na Loja."} </div>`;
+  if (!picker.open) picker.showModal();
+} else {
+  if (picker.open) picker.close();
+  $("selection").innerHTML = selectedId !== null
+    ? `<p class="pill">Máquina selecionada — toque em um slot vazio. ${cancelButton}</p>`
+    : "";
+}
+$("upgradeList").innerHTML=allMachines().length?allMachines().map(m=>`<div class="inventory-item"><span>${m.icon} <b>${m.name}</b><small class="muted">Nível ${m.level||0} • ${m.power} TH/s • ${m.watts} W</small></span><button onclick="upgrade(${m.id})">Melhorar (${lmt(Math.round((m.baseCost||m.cost)*(.55+(m.level||0)*.45)))})</button></div>`).join(""):"Instale máquinas para melhorá-las.";
+let defs=[["Primeira máquina",allMachines().length>=1,300],["Pequena fazenda",allMachines().length>=4,800],["Poder de 1.000 TH/s",power()>=1000,700],["Poder de 5.000 TH/s",power()>=5000,1800],["Primeiros 100 DCK minerados",game.total>=100,500],["10 horas online",game.seconds>=36000,1200],["Sala expandida",game.racks.length>3,1000]];
+$("missions").innerHTML=defs.map(([name,ok,reward],i)=>`<div class="mission"><b>${ok?"✅":"🎯"} ${name}</b><p class="muted">Recompensa: ${lmt(reward)}</p><button ${!ok||game.claimed.includes(i)?"disabled":""} onclick="claim(${i},${reward})">${game.claimed.includes(i)?"Resgatada":ok?"Resgatar":"Em andamento"}</button></div>`).join("");
+renderRanking();renderDaily();renderBattery();renderPool();$("events").innerHTML=game.history.map(x=>"<p>"+x+"</p>").join("")||"Bem-vindo à sua sala!";
+}
+function claim(i,reward){if(game.claimed.includes(i))return;game.claimed.push(i);game.balance+=reward;addEvent("Conquista resgatada: +"+lmt(reward));render();save()}
+const rivals=[{name:"Crypto Norte",power:1800},{name:"HashPower Brasil",power:4200},{name:"MegaBlock Mining",power:7600},{name:"BitFazenda",power:950},{name:"Digital Hash Corp.",power:12500}];
+function collectOfflineMining(){
+  if (!Number.isFinite(game.savedAt) || power() <= 0) return;
+  const elapsed = Math.max(0, Math.floor((Date.now() - game.savedAt) / 1000));
+  const activeSeconds = Math.min(elapsed, game.batterySeconds);
+  if (activeSeconds <= 0) return;
+  const gain = miningGain(activeSeconds);
+  game.balance += gain;
+  game.total += gain;
+  game.seconds += activeSeconds;
+  game.batterySeconds -= activeSeconds;
+  if (game.batterySeconds === 0) resetPoolRound();
+  addEvent("Mineração enquanto você esteve fora: +" + lmt(gain));
+  save();
+}
+
+
+function renderBattery(){$("clearBattery").disabled = game.batterySeconds <= 0;const reserve = game.batteryReserve || 0;$("batteryReserve").textContent = reserve ? "" : "Compre baterias na Loja.";const canFit = game.batterySeconds + BATTERY_SECONDS <= MAX_BATTERY_SECONDS;$("rechargeBattery").disabled = reserve === 0 || !canFit;if (reserve && !canFit) $("batteryReserve").textContent = "Aguarde até caber mais 24 h (limite de 7 dias).";let n=Math.max(0,Math.floor(game.batterySeconds));const days=Math.floor(n/BATTERY_SECONDS),hours=Math.floor(n%BATTERY_SECONDS/3600),minutes=Math.floor(n%3600/60);$("batteryTime").textContent=days+"d "+String(hours).padStart(2,"0")+"h "+String(minutes).padStart(2,"0")+"m";$("batteryCount").textContent=reserve;$("batteryBar").querySelectorAll("span").forEach((day,index)=>{const fill=Math.min(100,Math.max(0,(n/BATTERY_SECONDS-index)*100));day.style.setProperty("--charge",fill+"%")});$("batteryBar").setAttribute("aria-label","Carga restante: "+$("batteryTime").textContent+" em uma escala de sete dias");$("batteryStatus").textContent=n===0?"🔴 Sem carga. Recarregue para voltar a minerar.":game.running?"🟢 Bateria em uso.":"🟡 Instale uma máquina para começar a minerar.";}
+function renderRanking(){let list=[...rivals.map((r,i)=>({name:r.name,power:Math.round(r.power*(1+Math.floor(game.seconds/120)*.015)),mine:false})),{name:"Minha Empresa",power:power(),mine:true}].sort((a,b)=>b.power-a.power);$("rankingList").innerHTML=list.map((r,i)=>`<div class="inventory-item"><b>#${i+1} ${r.mine?"👑 ":"🏢 "}${r.name}</b><span>${fmt(r.power)} TH/s ${r.mine?"• VOCÊ":""}</span></div>`).join("");}
+
+function recordMetrics(){if(!Array.isArray(game.metrics))game.metrics=[];game.metrics.push({time:Date.now(),balance:game.balance,power:power(),mined:game.total,watts:watts()});game.metrics=game.metrics.slice(-160);save()}
+function drawChart(id,key){const c=$(id);if(!c)return;const w=Math.max(260,c.clientWidth||400),hh=190,dpr=window.devicePixelRatio||1;c.width=Math.round(w*dpr);c.height=Math.round(hh*dpr);const x=c.getContext('2d');x.scale(dpr,dpr);x.strokeStyle='#344b63';x.lineWidth=1;for(let i=0;i<=4;i++){let y=12+i*39;x.beginPath();x.moveTo(45,y);x.lineTo(w-8,y);x.stroke()}const pts=(game.metrics||[]).map(m=>Number(m[key])||0);x.fillStyle='#b8cbdb';x.font='11px Arial';if(!pts.length){x.fillText('Aguardando dados',50,90);return}let lo=Math.min(...pts),hi=Math.max(...pts);if(lo===hi){lo=Math.max(0,lo-1);hi+=1}x.fillText(fmt(hi),2,16);x.fillText(fmt(lo),2,170);x.strokeStyle='#43e6a0';x.lineWidth=2;x.beginPath();pts.forEach((v,i)=>{let px=47+(pts.length===1?.5:i/(pts.length-1))*(w-60),py=12+(hi-v)/(hi-lo)*156;i?x.lineTo(px,py):x.moveTo(px,py)});x.stroke();x.fillText(pts.length+' amostras',w-90,185)}
+function renderCharts(){if($("tab-charts").hidden)return;drawChart('chartBalance','balance');drawChart('chartPower','power');drawChart('chartMined','mined');drawChart('chartWatts','watts')}
+function localDay(d=new Date()){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
+function ordinal(s){let [y,m,d]=s.split('-').map(Number);return Math.floor(Date.UTC(y,m-1,d)/86400000)}
+function nextStreak(){if(!game.dailyLast)return 1;let delta=ordinal(localDay())-ordinal(game.dailyLast);return delta===1?game.dailyStreak+1:delta===0?game.dailyStreak:1}
+function renderDaily(){if(!$("dailyStreak"))return;let claimed=game.dailyLast===localDay(),streak=nextStreak();$("dailyStreak").textContent=game.dailyStreak+' dia(s)';$("dailyReward").textContent=lmt(200+Math.min(6,streak-1)*100);$("dailyStatus").textContent=claimed?'Recompensa de hoje já resgatada. Volte amanhã!':'Recompensa disponível.';$("dailyButton").disabled=claimed}
+function claimDaily(){if(game.dailyLast===localDay())return alert('Já resgatou hoje.');let streak=nextStreak(),reward=200+Math.min(6,streak-1)*100;game.dailyLast=localDay();game.dailyStreak=streak;game.balance+=reward;addEvent('Recompensa diária: +'+lmt(reward));render();save()}
+function openCrate(premium){let cost=premium?2000:250;if(game.balance<cost)return alert('Saldo insuficiente.');let weights=premium?[30,45,20,5]:[75,20,4,1],roll=Math.random()*100,idx=0;while(idx<3&&roll>=weights[idx]){roll-=weights[idx];idx++}let rarity=['Comum','Rara','Épica','Lendária'][idx],pool=idx===3?[legendaryModels[2]]:idx===2?[legendaryModels[1]]:idx===1?[models[2],models[3],legendaryModels[0]]:models;let base=pool[Math.floor(Math.random()*pool.length)],m={...base,id:Date.now()+Math.random(),rarity,level:0,baseCost:base.cost};game.balance-=cost;game.inventory.push(m);game.crateCount++;countMission("crate");$("crateResult").textContent=`🎉 ${m.icon} ${m.name} — ${rarity} — ${fmt(m.power)} TH/s. Enviada ao estoque!`;addEvent('Caixa: '+m.name+' ('+rarity+')');render();save();showPurchase(premium ? "Caixa Premium" : "Caixa Básica", cost)}
+
+
+function renderExchangeHistory(){
+  const history = game.walletHistory || [];
+  $("exchangeProgress").textContent = fmt(game.walletExchangeCount || 0)
+    + " troca(s) concluída(s) · " + lmt(game.walletExchangeTotal || 0) + " recebidos";
+  $("exchangeEmpty").hidden = history.length > 0;
+  const entries = history.map(({at, units}) => {
+    const item = document.createElement("li");
+    item.textContent = new Date(at).toLocaleString("pt-BR") + " · "
+      + fmt(units / 1000) + " XMR de teste → " + lmt(units);
+    return item;
+  });
+  $("walletHistory").replaceChildren(...entries);
+}
+
+function addTestXmr(){
+  game.testXmrUnits = (game.testXmrUnits || 0) + 1000;
+  $("exchangeStatus").textContent = "1 XMR de teste adicionado.";
+  render();
+  save();
+}
+
+</script><script src="online.js"></script><script src="deposits.js"></script></body></html>
