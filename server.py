@@ -14,11 +14,14 @@ import threading
 import time
 import webbrowser
 from datetime import datetime, timedelta, timezone
+from decimal import Decimal, ROUND_DOWN
 from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from socket import timeout as SocketTimeout
+from urllib.parse import urlsplit, parse_qs
 
 ROOT = Path(__file__).resolve().parent
-DB = ROOT / 'data' / 'duckminer.sqlite3'
+DB = Path(os.environ.get('DUCKMINER_DB_PATH', str(ROOT / 'data' / 'duckminer.sqlite3')))
 UNIT = 1_000_000
 DAY = 86400
 SLOTS = 4
@@ -28,6 +31,8 @@ MISSION = {
     'weekly': [('machine', 3, 250), ('battery', 3, 200), ('crate', 2, 250)],
 }
 TZ = timezone(timedelta(hours=-3))
+SESSION_SECONDS = DAY
+HASH_SLOTS = threading.BoundedSemaphore(3)
 
 
 class Connection(sqlite3.Connection):
@@ -61,7 +66,31 @@ def initialize():
         CREATE TABLE IF NOT EXISTS requests(
           user_id INTEGER, key TEXT, PRIMARY KEY(user_id,key));
         CREATE TABLE IF NOT EXISTS attempts(ip TEXT PRIMARY KEY, start INTEGER, count INTEGER);
+        CREATE TABLE IF NOT EXISTS limits(key TEXT PRIMARY KEY, start INTEGER, count INTEGER);
+        CREATE TABLE IF NOT EXISTS admin_audit(
+          id INTEGER PRIMARY KEY, at INTEGER, actor INTEGER, target INTEGER, action TEXT);
+        CREATE TABLE IF NOT EXISTS deposits(
+          id TEXT PRIMARY KEY, user_id INTEGER NOT NULL, created INTEGER NOT NULL,
+          amount INTEGER NOT NULL, rate TEXT NOT NULL, credit INTEGER NOT NULL,
+          address TEXT UNIQUE, txid TEXT, vout INTEGER, status TEXT NOT NULL,
+          approved_at INTEGER, confirmations INTEGER);
+        CREATE UNIQUE INDEX IF NOT EXISTS deposit_outpoint ON deposits(txid,vout) WHERE status='approved';
         ''')
+        columns = {row['name'] for row in db.execute('PRAGMA table_info(users)')}
+        if 'blocked' not in columns:
+            db.execute('ALTER TABLE users ADD COLUMN blocked INTEGER NOT NULL DEFAULT 0')
+        if 'created_at' not in columns:
+            db.execute('ALTER TABLE users ADD COLUMN created_at INTEGER NOT NULL DEFAULT 0')
+        columns = {row['name'] for row in db.execute('PRAGMA table_info(sessions)')}
+        if 'csrf' not in columns:
+            db.execute("ALTER TABLE sessions ADD COLUMN csrf TEXT NOT NULL DEFAULT ''")
+        if 'admin_until' not in columns:
+            db.execute('ALTER TABLE sessions ADD COLUMN admin_until INTEGER NOT NULL DEFAULT 0')
+        if 'last_seen' not in columns:
+            db.execute('ALTER TABLE sessions ADD COLUMN last_seen INTEGER NOT NULL DEFAULT 0')
+        columns = {row['name'] for row in db.execute('PRAGMA table_info(requests)')}
+        if 'body_hash' not in columns:
+            db.execute("ALTER TABLE requests ADD COLUMN body_hash TEXT NOT NULL DEFAULT ''")
         now = int(time.time())
         db.execute('INSERT OR IGNORE INTO pool VALUES(1,?,?)', (now, now - now % 60))
 
@@ -92,7 +121,7 @@ def advance(db, now):
     last, start = pool['last'], pool['start']
     if now <= last:
         return
-    states = {r['id']: json.loads(r['state']) for r in db.execute('SELECT id,state FROM users')}
+    states = {r['id']: json.loads(r['state']) for r in db.execute('SELECT id,state FROM users WHERE blocked=0')}
     while last < now:
         # Empty pools can skip whole intervals after downtime.
         if not any(s['batterySeconds'] > 0 and power(s) for s in states.values()) and not any(s['work'] for s in states.values()):
@@ -177,7 +206,16 @@ def slot(s, data, prefix=''):
 def act(s, data):
     name = data.get('action')
     message = 'Operação concluída.'
-    if name == 'buy':
+    if name == 'settings':
+        display = data.get('displayName')
+        zoom = data.get('zoom')
+        if not isinstance(display, str) or not 2 <= len(display.strip()) <= 24 or any(ord(c) < 32 for c in display):
+            raise ValueError('Nome de exibição inválido.')
+        if type(zoom) is not int or zoom not in (75, 90, 100, 110, 125):
+            raise ValueError('Zoom inválido.')
+        s['settings'] = {'displayName': display.strip(), 'zoom': zoom}
+        message = 'Configurações salvas.'
+    elif name == 'buy':
         index = integer(data, 'index', high=len(MODELS)-1)
         spend(s, MODELS[index]['cost'])
         s['inventory'].append(new_machine(index))
@@ -283,7 +321,7 @@ def act(s, data):
 
 
 def snapshot(db, uid):
-    users = list(db.execute('SELECT id,name,state FROM users'))
+    users = list(db.execute('SELECT id,name,state FROM users WHERE blocked=0'))
     s = next(json.loads(u['state']) for u in users if u['id'] == uid)
     for period in MISSION:
         progress(s, period)
@@ -294,13 +332,200 @@ def snapshot(db, uid):
                      'running': bool(active(s)), 'metrics': [], 'poolSeconds': elapsed,
                      'poolLastReward': s['lastReward']/UNIT},
             'pool': {'power': network, 'elapsed': elapsed, 'reward': 10},
-            'ranking': sorted([{'name': u['name'], 'power': active(json.loads(u['state'])),
+            'ranking': sorted([{'name': json.loads(u['state']).get('settings', {}).get('displayName', u['name']), 'power': active(json.loads(u['state'])),
                                 'mine': u['id'] == uid} for u in users], key=lambda u: -u['power']),
-            'user': next(u['name'] for u in users if u['id'] == uid)}
+            'user': next(u['name'] for u in users if u['id'] == uid),
+            'adminEligible': admin_eligible(db, uid),
+            'depositConfig': deposit_config(),
+            'deposits': [dict(row) for row in db.execute('SELECT * FROM deposits WHERE user_id=? ORDER BY created DESC,rowid DESC LIMIT 50',(uid,))]}
+
+
+def deposit_config():
+    rate = os.environ.get('DUCKMINER_DOGE_DCK_RATE','')
+    valid = bool(re.fullmatch(r'\d{1,7}(?:\.\d{1,6})?',rate)) and 0 < Decimal(rate) <= 1000000
+    # Acknowledgement is an explicit operator action after durable storage setup.
+    enabled = (valid and os.environ.get('DUCKMINER_MANUAL_DEPOSITS') == '1'
+               and os.environ.get('DUCKMINER_PERSISTENT_STORAGE_CONFIRMED') == '1'
+               and os.environ.get('DUCKMINER_DEMO') != '1'
+               and bool(os.environ.get('DUCKMINER_DB_PATH')))
+    return {'enabled':enabled, 'rate':rate if valid else None, 'network':'Dogecoin mainnet'}
+
+
+def doge_amount(value):
+    if not isinstance(value,str) or not re.fullmatch(r'\d{1,7}(?:\.\d{1,8})?',value):
+        raise ValueError('Valor DOGE inválido.')
+    amount = int(Decimal(value)*100000000)
+    if not 0 < amount <= 1000000*100000000:
+        raise ValueError('Valor DOGE fora do limite.')
+    return amount
+
+
+def doge_address(value):
+    """Validate a mainnet Base58Check P2PKH or P2SH public address."""
+    alphabet = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
+    if not isinstance(value,str) or not 26 <= len(value) <= 35:
+        return False
+    number = 0
+    for char in value:
+        if char not in alphabet:
+            return False
+        number = number*58 + alphabet.index(char)
+    raw = b'\0'*(len(value)-len(value.lstrip('1'))) + number.to_bytes((number.bit_length()+7)//8,'big')
+    return (len(raw) == 25 and raw[0] in (0x1e,0x16)
+            and hmac.compare_digest(hashlib.sha256(hashlib.sha256(raw[:-4]).digest()).digest()[:4],raw[-4:]))
+
+
+def deposit_action(db, uid, data, now, administrative=False):
+    if not deposit_config()['enabled']:
+        raise ValueError('Depósitos desativados.')
+    action = data.get('action')
+    if action == 'create' and not administrative:
+        existing = db.execute("SELECT * FROM deposits WHERE user_id=? AND status IN ('address','payment','review')",(uid,)).fetchone()
+        if existing:
+            return {'message':'Você já tem uma solicitação em andamento.'}
+        amount = doge_amount(data.get('amount'))
+        rate = deposit_config()['rate']
+        credit = int((Decimal(amount)*Decimal(rate)*UNIT/100000000).to_integral_value(rounding=ROUND_DOWN))
+        if not 0 < credit <= 1000000*UNIT:
+            raise ValueError('Crédito fora do limite permitido.')
+        db.execute('INSERT INTO deposits(id,user_id,created,amount,rate,credit,status) VALUES(?,?,?,?,?,?,?)',
+                   (secrets.token_hex(16),uid,now,amount,rate,credit,'address'))
+        return {'message':'Solicitação criada. Aguarde o endereço exclusivo do administrador.'}
+    invoice = db.execute('SELECT * FROM deposits WHERE id=?',(data.get('id'),)).fetchone()
+    if not invoice or (not administrative and invoice['user_id'] != uid):
+        raise ValueError('Solicitação indisponível.')
+    if action == 'report' and not administrative:
+        txid = data.get('txid','')
+        if not isinstance(txid,str) or not re.fullmatch('[a-fA-F0-9]{64}',txid) or invoice['status'] != 'payment':
+            raise ValueError('Transação ou estado inválido.')
+        db.execute("UPDATE deposits SET txid=?,status='review' WHERE id=?",(txid.lower(),invoice['id']))
+        return {'message':'Transação enviada para conferência manual.'}
+    if not administrative:
+        raise ValueError('Ação inválida.')
+    if action == 'assign':
+        address = data.get('address','')
+        if invoice['status'] != 'address' or not doge_address(address):
+            raise ValueError('Endereço Dogecoin mainnet inválido ou solicitação indisponível.')
+        if db.execute('SELECT 1 FROM deposits WHERE address=?',(address,)).fetchone():
+            raise ValueError('Use um endereço exclusivo novo para cada solicitação.')
+        db.execute("UPDATE deposits SET address=?,status='payment' WHERE id=?",(address,invoice['id']))
+    elif action == 'approve':
+        if invoice['status'] == 'approved':
+            return {'message':'Este depósito já foi creditado.'}
+        vout = integer(data,'vout')
+        if invoice['status'] != 'review' or data.get('verified') is not True or doge_amount(data.get('received')) != invoice['amount']:
+            raise ValueError('Confira o endereço, saída, valor e confirmações antes de aprovar.')
+        confirmations = integer(data,'confirmations',low=6)
+        if db.execute("SELECT 1 FROM deposits WHERE txid=? AND vout=? AND status='approved'",(invoice['txid'],vout)).fetchone():
+            raise ValueError('Esta saída de transação já foi creditada.')
+        target = db.execute('SELECT state,blocked FROM users WHERE id=?',(invoice['user_id'],)).fetchone()
+        if not target or target['blocked']:
+            raise ValueError('Conta indisponível.')
+        state = json.loads(target['state'])
+        state['coins'] += invoice['credit']
+        event(state,'Depósito DOGE aprovado: +'+str(invoice['credit']/UNIT)+' DCK')
+        db.execute('UPDATE users SET state=? WHERE id=?',(json.dumps(state),invoice['user_id']))
+        db.execute("UPDATE deposits SET status='approved',vout=?,approved_at=?,confirmations=? WHERE id=?",(vout,now,confirmations,invoice['id']))
+    else:
+        raise ValueError('Ação indisponível.')
+    db.execute('INSERT INTO admin_audit(at,actor,target,action) VALUES(?,?,?,?)',
+               (now,uid,invoice['user_id'],'deposit:'+action+':'+invoice['id']))
+    return {'message':'Solicitação atualizada.'}
+
+
+def admin_eligible(db, uid):
+    expected = os.environ.get('DUCKMINER_ADMIN_USERNAME', '').strip().lower()
+    row = db.execute('SELECT name FROM users WHERE id=? AND blocked=0', (uid,)).fetchone()
+    return bool(expected and row and row['name'] == expected)
+
+
+def admin_snapshot(db, now, offset):
+    total = db.execute('SELECT count(*) FROM users').fetchone()[0]
+    recent = db.execute('SELECT count(DISTINCT user_id) FROM sessions WHERE expires>? AND last_seen>?', (now, now-60)).fetchone()[0]
+    players = []
+    for user in db.execute('SELECT id,name,state,blocked,created_at FROM users ORDER BY id LIMIT 50 OFFSET ?', (offset,)):
+        state = json.loads(user['state'])
+        session = db.execute('SELECT count(*) AS count,max(last_seen) AS seen FROM sessions WHERE user_id=? AND expires>?', (user['id'],now)).fetchone()
+        players.append(dict(id=user['id'], name=user['name'], displayName=state.get('settings',{}).get('displayName',user['name']),
+                            blocked=bool(user['blocked']), createdAt=user['created_at'],
+                            balance=state['coins']/UNIT, totalMined=state['mined']/UNIT,
+                            installed=len(machines(state)), inventory=len(state['inventory']),
+                            power=power(state), batterySeconds=state['batterySeconds'],
+                            batteries=state['batteryReserve'], activeSessions=session['count'],
+                            lastSeen=session['seen'] or 0, admin=user['name'] == os.environ.get('DUCKMINER_ADMIN_USERNAME','').strip().lower()))
+    return dict(total=total, recent=recent, players=players, offset=offset, limit=50)
+
+
+def consume_limits(rules, now):
+    """Independent transaction so rejected attempts cannot roll back their counters."""
+    with connect() as db:
+        db.execute('BEGIN IMMEDIATE')
+        db.execute('DELETE FROM limits WHERE start < ?', (now - 3600,))
+        allowed = True
+        for key, maximum, duration in rules:
+            row = db.execute('SELECT start,count FROM limits WHERE key=?', (key,)).fetchone()
+            start, count = (row['start'], row['count']) if row and now-row['start'] < duration else (now, 0)
+            allowed = allowed and count < maximum
+            db.execute('INSERT OR REPLACE INTO limits VALUES(?,?,?)', (key, start, min(count+1, maximum+1)))
+        return allowed
+
+
+def invitation_valid(value):
+    expected = os.environ.get('DUCKMINER_INVITE_CODE', '')
+    return (len(expected) >= 16 and isinstance(value, str)
+            and hmac.compare_digest(value.encode(), expected.encode()))
+
+
+class LimitedServer(ThreadingHTTPServer):
+    """Bound sockets and threads, including clients that stop sending a request."""
+    daemon_threads = True
+    request_queue_size = 32
+
+    def __init__(self, *args, **kwargs):
+        self.slots = threading.BoundedSemaphore(24)
+        super().__init__(*args, **kwargs)
+
+    def process_request(self, request, client_address):
+        if not self.slots.acquire(blocking=False):
+            try:
+                request.settimeout(1)
+                request.sendall(b'HTTP/1.0 503 Service Unavailable\r\nConnection: close\r\nContent-Length: 0\r\n\r\n')
+            except OSError:
+                pass
+            finally:
+                self.shutdown_request(request)
+            return
+        try:
+            super().process_request(request, client_address)
+        except Exception:
+            self.slots.release()
+            raise
+
+    def process_request_thread(self, request, client_address):
+        try:
+            super().process_request_thread(request, client_address)
+        finally:
+            self.slots.release()
 
 
 class Handler(BaseHTTPRequestHandler):
     server_version = 'DuckMiner'
+    sys_version = ''
+
+    def setup(self):
+        super().setup()
+        self.connection.settimeout(10)
+
+    def end_headers(self):
+        self.send_header('X-Content-Type-Options', 'nosniff')
+        self.send_header('X-Frame-Options', 'DENY')
+        self.send_header('Referrer-Policy', 'same-origin')
+        self.send_header('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')
+        # The retained interface uses inline handlers. Scripts cannot connect to third parties.
+        self.send_header('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'")
+        if os.environ.get('DUCKMINER_SECURE_COOKIE') == '1':
+            self.send_header('Strict-Transport-Security', 'max-age=31536000')
+        super().end_headers()
 
     def log_message(self, *_):
         pass
@@ -317,82 +542,204 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_GET(self):
-        if self.path == '/api/state':
+        if urlsplit(self.path).path in ('/api/state', '/api/admin', '/api/admin/deposits'):
             return self.api()
         files = {'/': ('index.html', 'text/html; charset=utf-8'),
-                 '/online.js': ('online.js', 'application/javascript; charset=utf-8')}
+                 '/online.js': ('online.js', 'application/javascript; charset=utf-8'),
+                 '/deposits.js': ('deposits.js', 'application/javascript; charset=utf-8')}
         if self.path not in files:
             return self.reply(404, {'error': 'Página indisponível.'})
         name, mime = files[self.path]
-        body = (ROOT / 'public' / name).read_bytes()
+        try:
+            body = (ROOT / 'public' / name).read_bytes()
+        except OSError:
+            return self.reply(503, {'error': 'Arquivos do jogo ausentes. Confira a pasta public no GitHub.'})
+        if name == 'index.html' and os.environ.get('DUCKMINER_DEMO') == '1':
+            notice = '<div style="padding:12px;background:#713f12;color:white;font-weight:bold">Demonstração gratuita: contas e progresso podem ser apagados quando o serviço reiniciar. DCK fictício.</div>'
+            body = body.replace(b'<body>', b'<body>' + notice.encode())
         self.send_response(200)
         self.send_header('Content-Type', mime)
         self.send_header('Content-Length', str(len(body)))
         self.send_header('Cache-Control', 'no-store')
-        self.send_header('X-Content-Type-Options', 'nosniff')
-        self.send_header('X-Frame-Options', 'DENY')
         self.end_headers()
         self.wfile.write(body)
 
     def do_POST(self):
         origin = self.headers.get('Origin')
-        if origin and origin not in ('http://' + self.headers.get('Host', ''), 'https://' + self.headers.get('Host', '')):
+        host = self.headers.get('Host', '')
+        try:
+            parsed = urlsplit(origin) if origin else None
+        except ValueError:
             return self.reply(403, {'error': 'Origem inválida.'})
+        if (self.headers.get('Sec-Fetch-Site') == 'cross-site'
+                or (origin and (not parsed or parsed.scheme not in ('http', 'https') or parsed.netloc != host or parsed.path or parsed.query or parsed.fragment))):
+            return self.reply(403, {'error': 'Origem inválida.'})
+        if self.headers.get('Content-Type', '').split(';')[0].strip().lower() != 'application/json':
+            return self.reply(415, {'error': 'Use uma requisição JSON.'})
+        if self.headers.get('X-DuckMiner-Request') != '1':
+            return self.reply(403, {'error': 'Recarregue a página do jogo.'})
+        if self.headers.get('Transfer-Encoding'):
+            return self.reply(400, {'error': 'Formato de requisição inválido.'})
         self.api()
 
     def api(self):
         db = connect()
         try:
             data = {}
+            now = int(time.time())
+            path = urlsplit(self.path).path
+            network_key = hashlib.sha256(self.client_address[0].encode()).hexdigest()
+            # Do not trust a client-supplied X-Forwarded-For header. Account and
+            # session limits below isolate players even when Render shares a proxy IP.
+            if not consume_limits([('network:'+network_key, 3000, 60)], now):
+                return self.reply(429, {'error': 'Muitas requisições. Aguarde um minuto.'})
             if self.command == 'POST':
                 length = int(self.headers.get('Content-Length', 0))
                 if not 0 < length <= 4096:
                     raise ValueError('Pedido inválido.')
-                data = json.loads(self.rfile.read(length))
+                data = json.loads(self.rfile.read(length), parse_constant=lambda _: (_ for _ in ()).throw(ValueError()))
                 if not isinstance(data, dict):
                     raise ValueError('Pedido inválido.')
-            now = int(time.time())
-            db.execute('BEGIN IMMEDIATE')
-            advance(db, now)
             if self.path in ('/api/register', '/api/login') and self.command == 'POST':
                 name, password = data.get('name', ''), data.get('password', '')
+                # Count even malformed credentials and incorrect invitation codes.
+                account_key = hashlib.sha256(str(name).lower().encode()).hexdigest()
+                if not consume_limits([('auth-network:'+network_key, 100, 600),
+                                       ('auth-account:'+account_key, 10, 600)], now):
+                    return self.reply(429, {'error': 'Muitas tentativas. Aguarde dez minutos.'})
+                registering = self.path == '/api/register'
+                if registering and not invitation_valid(data.get('invite')):
+                    return self.reply(403, {'error': 'Cadastro restrito. Solicite um convite válido ao responsável pelo jogo.'})
                 if not isinstance(name, str) or not re.fullmatch(r'[a-zA-Z0-9_]{3,24}', name) or not isinstance(password, str) or not 10 <= len(password) <= 128:
                     raise ValueError('Use um nome com 3–24 letras, números ou _ e senha com 10–128 caracteres.')
                 name = name.lower()
-                attempt = db.execute('SELECT * FROM attempts WHERE ip=?', (self.client_address[0],)).fetchone()
-                attempts = attempt['count'] if attempt and now-attempt['start'] < 600 else 0
-                start = attempt['start'] if attempts else now
-                if attempts >= 30:
-                    db.commit()
-                    return self.reply(429, {'error': 'Muitas tentativas. Aguarde dez minutos.'})
-                db.execute('INSERT OR REPLACE INTO attempts VALUES(?,?,?)', (self.client_address[0], start, attempts+1))
                 user = db.execute('SELECT * FROM users WHERE name=?', (name,)).fetchone()
-                registering = self.path == '/api/register'
                 salt = user['salt'] if user else secrets.token_bytes(16)
-                hashed = hashlib.scrypt(password.encode(), salt=salt, n=16384, r=8, p=1)
-                if (registering and user) or (not registering and (not user or not hmac.compare_digest(hashed, user['password']))):
-                    db.commit()
+                if not HASH_SLOTS.acquire(blocking=False):
+                    return self.reply(429, {'error': 'Servidor ocupado. Aguarde alguns segundos.'})
+                try:
+                    hashed = hashlib.scrypt(password.encode(), salt=salt, n=16384, r=8, p=1)
+                finally:
+                    HASH_SLOTS.release()
+                if (registering and user) or (not registering and (not user or user['blocked'] or not hmac.compare_digest(hashed, user['password']))):
                     return self.reply(400, {'error': 'Nome indisponível ou credenciais inválidas.'})
+                db.execute('BEGIN IMMEDIATE')
+                advance(db, now)
                 if registering:
-                    uid = db.execute('INSERT INTO users(name,salt,password,state) VALUES(?,?,?,?)', (name, salt, hashed, json.dumps(fresh()))).lastrowid
+                    if db.execute('SELECT 1 FROM users WHERE name=?', (name,)).fetchone():
+                        db.rollback()
+                        return self.reply(400, {'error': 'Nome indisponível ou credenciais inválidas.'})
+                    uid = db.execute('INSERT INTO users(name,salt,password,state,created_at) VALUES(?,?,?,?,?)', (name, salt, hashed, json.dumps(fresh()),now)).lastrowid
                 else:
                     uid = user['id']
+                    if db.execute('SELECT blocked FROM users WHERE id=?', (uid,)).fetchone()[0]:
+                        db.rollback()
+                        return self.reply(403, {'error': 'Conta indisponível.'})
                 token = secrets.token_urlsafe(32)
-                db.execute('INSERT INTO sessions VALUES(?,?,?)', (hashlib.sha256(token.encode()).hexdigest(), uid, now+7*DAY))
+                csrf = secrets.token_urlsafe(32)
+                db.execute('INSERT INTO sessions(token,user_id,expires,csrf,last_seen) VALUES(?,?,?,?,?)', (hashlib.sha256(token.encode()).hexdigest(), uid, now+SESSION_SECONDS, csrf,now))
                 db.execute('DELETE FROM sessions WHERE expires<=?', (now,))
                 result = snapshot(db, uid)
+                result['csrf'] = csrf
                 db.commit()
                 secure = '; Secure' if os.environ.get('DUCKMINER_SECURE_COOKIE') == '1' else ''
-                return self.reply(200, result, f'duck_session={token}; HttpOnly; SameSite=Strict; Path=/; Max-Age={7*DAY}{secure}')
+                return self.reply(200, result, f'duck_session={token}; HttpOnly; SameSite=Strict; Path=/; Max-Age={SESSION_SECONDS}{secure}')
             cookie = SimpleCookie(self.headers.get('Cookie', ''))
             token = cookie['duck_session'].value if 'duck_session' in cookie else ''
             digest = hashlib.sha256(token.encode()).hexdigest()
-            session = db.execute('SELECT user_id FROM sessions WHERE token=? AND expires>?', (digest, now)).fetchone()
+            session = db.execute('SELECT user_id,csrf,admin_until FROM sessions JOIN users ON users.id=sessions.user_id WHERE token=? AND expires>? AND blocked=0', (digest, now)).fetchone()
             if not session:
                 db.commit()
                 return self.reply(401, {'error': 'Entre na sua conta.'})
             uid = session['user_id']
+            rules = [('session:'+digest, 120, 60)]
+            if self.command == 'POST':
+                rules.append(('action:'+str(uid), 30, 60))
+                csrf = self.headers.get('X-CSRF-Token', '')
+                if not session['csrf'] or not hmac.compare_digest(csrf.encode(), session['csrf'].encode()):
+                    return self.reply(403, {'error': 'Sessão desatualizada. Recarregue o jogo.'})
+            if not consume_limits(rules, now):
+                return self.reply(429, {'error': 'Muitas ações. Aguarde um minuto.'})
+            if path == '/api/admin/unlock':
+                if not consume_limits([('admin-unlock:'+str(uid), 5, 600)], now):
+                    return self.reply(429, {'error': 'Muitas tentativas de acesso administrativo. Aguarde dez minutos.'})
+            db.execute('BEGIN IMMEDIATE')
+            # Recheck after acquiring the write lock, so logout/revocation wins races.
+            session = db.execute('SELECT user_id,csrf,admin_until FROM sessions JOIN users ON users.id=sessions.user_id WHERE token=? AND expires>? AND blocked=0', (digest, now)).fetchone()
+            if not session:
+                db.rollback()
+                return self.reply(401, {'error': 'Entre na sua conta.'})
+            if not session['csrf']:
+                csrf = secrets.token_urlsafe(32)
+                db.execute('UPDATE sessions SET csrf=? WHERE token=?', (csrf, digest))
+            else:
+                csrf = session['csrf']
+            advance(db, now)
+            db.execute('UPDATE sessions SET last_seen=? WHERE token=?', (now,digest))
+            if path.startswith('/api/admin'):
+                if not admin_eligible(db, uid):
+                    db.rollback()
+                    return self.reply(403, {'error': 'Acesso exclusivo do administrador.'})
+                if path == '/api/admin/unlock' and self.command == 'POST':
+                    expected = os.environ.get('DUCKMINER_ADMIN_KEY', '')
+                    supplied = data.get('key')
+                    if len(expected) < 24 or not isinstance(supplied,str) or not hmac.compare_digest(expected.encode(), supplied.encode()):
+                        db.rollback()
+                        return self.reply(403, {'error': 'Chave administrativa inválida ou não configurada.'})
+                    db.execute('UPDATE sessions SET admin_until=? WHERE token=?', (now+900,digest))
+                    db.commit()
+                    return self.reply(200, {'message':'Administração liberada por 15 minutos.'})
+                if session['admin_until'] <= now:
+                    db.rollback()
+                    return self.reply(403, {'error': 'Digite a chave administrativa para liberar o painel.'})
+                if path == '/api/admin/deposits' and self.command == 'GET':
+                    offset = int(parse_qs(urlsplit(self.path).query).get('offset',['0'])[0])
+                    if offset < 0:
+                        raise ValueError('Página inválida.')
+                    rows = db.execute('SELECT deposits.*,users.name FROM deposits JOIN users ON users.id=deposits.user_id ORDER BY created DESC,deposits.rowid DESC LIMIT 50 OFFSET ?',(offset,))
+                    result = {'deposits':[dict(r) for r in rows], 'offset':offset,
+                              'total':db.execute('SELECT count(*) FROM deposits').fetchone()[0]}
+                    db.commit()
+                    return self.reply(200,result)
+                if path == '/api/admin/deposit' and self.command == 'POST':
+                    result = deposit_action(db,uid,data,now,administrative=True)
+                    db.commit()
+                    return self.reply(200,result)
+                if path == '/api/admin' and self.command == 'GET':
+                    offset = int(parse_qs(urlsplit(self.path).query).get('offset',['0'])[0])
+                    if offset < 0:
+                        raise ValueError('Página inválida.')
+                    result = admin_snapshot(db,now,offset)
+                    db.commit()
+                    return self.reply(200,result)
+                if path == '/api/admin/action' and self.command == 'POST':
+                    target = integer(data,'userId')
+                    target_user = db.execute('SELECT name FROM users WHERE id=?',(target,)).fetchone()
+                    if not target_user:
+                        raise ValueError('Conta indisponível.')
+                    if target == uid or admin_eligible(db,target):
+                        db.rollback()
+                        return self.reply(400,{'error':'Esta operação não se aplica à conta administradora.'})
+                    action = data.get('action')
+                    if action in ('block','unblock'):
+                        db.execute('UPDATE users SET blocked=? WHERE id=?',(int(action == 'block'),target))
+                        if action == 'block':
+                            state = json.loads(db.execute('SELECT state FROM users WHERE id=?',(target,)).fetchone()[0])
+                            state['work'] = 0
+                            db.execute('UPDATE users SET state=? WHERE id=?',(json.dumps(state),target))
+                    elif action != 'revoke':
+                        raise ValueError('Ação inválida.')
+                    if action in ('block','revoke'):
+                        db.execute('DELETE FROM sessions WHERE user_id=?',(target,))
+                    db.execute('INSERT INTO admin_audit(at,actor,target,action) VALUES(?,?,?,?)',(now,uid,target,action))
+                    db.commit()
+                    return self.reply(200,{'message':'Operação administrativa concluída.'})
+                raise ValueError('Rota administrativa inválida.')
             message = None
+            if path == '/api/deposit' and self.command == 'POST':
+                result = deposit_action(db,uid,data,now)
+                db.commit()
+                return self.reply(200,result)
             if self.path == '/api/logout' and self.command == 'POST':
                 db.execute('DELETE FROM sessions WHERE token=?', (digest,))
                 db.commit()
@@ -401,23 +748,31 @@ class Handler(BaseHTTPRequestHandler):
                 key = self.headers.get('Idempotency-Key', '')
                 if not re.fullmatch(r'[a-zA-Z0-9-]{16,80}', key):
                     raise ValueError('Identificador da operação inválido.')
-                exists = db.execute('SELECT 1 FROM requests WHERE user_id=? AND key=?', (uid, key)).fetchone()
+                body_hash = hashlib.sha256(json.dumps(data, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
+                exists = db.execute('SELECT body_hash FROM requests WHERE user_id=? AND key=?', (uid, key)).fetchone()
+                if exists and exists['body_hash'] != body_hash:
+                    db.rollback()
+                    return self.reply(409, {'error': 'Identificador já usado para outra operação.'})
                 if not exists:
                     s = json.loads(db.execute('SELECT state FROM users WHERE id=?', (uid,)).fetchone()[0])
                     message = act(s, data)
                     db.execute('UPDATE users SET state=? WHERE id=?', (json.dumps(s), uid))
-                    db.execute('INSERT INTO requests VALUES(?,?)', (uid, key))
+                    db.execute('INSERT INTO requests(user_id,key,body_hash) VALUES(?,?,?)', (uid, key, body_hash))
             elif self.path != '/api/state' or self.command != 'GET':
                 raise ValueError('Pedido indisponível.')
             result = snapshot(db, uid)
             result['message'] = message
+            result['csrf'] = csrf
             db.commit()
             self.reply(200, result)
-        except (ValueError, TypeError, KeyError, IndexError):
+        except (ValueError, TypeError, KeyError, IndexError, UnicodeError):
             db.rollback()
             self.reply(400, {'error': 'Operação inválida ou indisponível. Confira saldo, carga e requisitos.'})
-        except Exception:
+        except (SocketTimeout, ConnectionError):
             db.rollback()
+        except Exception as error:
+            db.rollback()
+            print('Falha na API:', type(error).__name__, flush=True)
             self.reply(500, {'error': 'Não foi possível concluir. Tente novamente.'})
         finally:
             db.close()
@@ -440,8 +795,10 @@ if __name__ == '__main__':
     parser.add_argument('--open', action='store_true', help='Abrir o jogo no navegador')
     args = parser.parse_args()
     initialize()
+    if len(os.environ.get('DUCKMINER_INVITE_CODE', '')) < 16:
+        print('Cadastro fechado: configure DUCKMINER_INVITE_CODE com pelo menos 16 caracteres para liberar convites.', flush=True)
     try:
-        http = ThreadingHTTPServer((args.host, args.port), Handler)
+        http = LimitedServer((args.host, args.port), Handler)
     except OSError as error:
         print(f'Nao foi possivel abrir a porta {args.port}: {error}', flush=True)
         print('Feche outro DuckMiner aberto ou use: python server.py --port 8001 --open', flush=True)
