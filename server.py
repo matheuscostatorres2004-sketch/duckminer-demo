@@ -13,6 +13,7 @@ import sqlite3
 import threading
 import time
 import webbrowser
+import btc
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal, ROUND_DOWN
 from http.cookies import SimpleCookie
@@ -94,6 +95,7 @@ def initialize():
         columns = {row['name'] for row in db.execute('PRAGMA table_info(requests)')}
         if 'body_hash' not in columns:
             db.execute("ALTER TABLE requests ADD COLUMN body_hash TEXT NOT NULL DEFAULT ''")
+        btc.initialize(db)
         now = int(time.time())
         db.execute('INSERT OR IGNORE INTO pool VALUES(1,?,?)', (now, now - now % 60))
 
@@ -341,6 +343,7 @@ def snapshot(db, uid):
             'email': db.execute('SELECT email FROM users WHERE id=?',(uid,)).fetchone()[0],
             'adminEligible': admin_eligible(db, uid),
             'depositConfig': deposit_config(),
+            'btcConfig':btc.config(), 'btcDeposits':btc.player_data(db,uid),
             'deposits': [dict(row) for row in db.execute('SELECT * FROM deposits WHERE user_id=? ORDER BY created DESC,rowid DESC LIMIT 50',(uid,))]}
 
 
@@ -562,11 +565,12 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_GET(self):
-        if urlsplit(self.path).path in ('/api/state', '/api/admin', '/api/admin/deposits'):
+        if urlsplit(self.path).path in ('/api/state', '/api/admin', '/api/admin/deposits', '/api/admin/btc', '/api/deposits/history'):
             return self.api()
         files = {'/': ('index.html', 'text/html; charset=utf-8'),
                  '/online.js': ('online.js', 'application/javascript; charset=utf-8'),
-                 '/deposits.js': ('deposits.js', 'application/javascript; charset=utf-8')}
+                 '/deposits.js': ('deposits.js', 'application/javascript; charset=utf-8'),
+                 '/bitcoin.js': ('bitcoin.js', 'application/javascript; charset=utf-8')}
         if self.path not in files:
             return self.reply(404, {'error': 'Página indisponível.'})
         name, mime = files[self.path]
@@ -712,6 +716,13 @@ class Handler(BaseHTTPRequestHandler):
                 csrf = session['csrf']
             advance(db, now)
             db.execute('UPDATE sessions SET last_seen=? WHERE token=?', (now,digest))
+            if path == '/api/deposits/history' and self.command == 'GET':
+                offset = int(parse_qs(urlsplit(self.path).query).get('offset',['0'])[0])
+                if offset < 0:
+                    raise ValueError('Página inválida.')
+                result = btc.history(db,uid,offset)
+                db.commit()
+                return self.reply(200,result)
             if path == '/api/account/email' and self.command == 'POST':
                 email = normalize_email(data.get('email'))
                 user = db.execute('SELECT * FROM users WHERE id=?',(uid,)).fetchone()
@@ -749,6 +760,19 @@ class Handler(BaseHTTPRequestHandler):
                 if session['admin_until'] <= now:
                     db.rollback()
                     return self.reply(403, {'error': 'Digite a chave administrativa para liberar o painel.'})
+                if path == '/api/admin/btc' and self.command == 'GET':
+                    offset = int(parse_qs(urlsplit(self.path).query).get('offset',['0'])[0])
+                    if offset < 0:
+                        raise ValueError('Página inválida.')
+                    rows = db.execute('SELECT btc_deposits.*,users.name FROM btc_deposits JOIN users ON users.id=btc_deposits.user_id ORDER BY created DESC,btc_deposits.rowid DESC LIMIT 50 OFFSET ?',(offset,))
+                    result = {'deposits':[dict(row) for row in rows], 'offset':offset,
+                              'total':db.execute('SELECT count(*) FROM btc_deposits').fetchone()[0]}
+                    db.commit()
+                    return self.reply(200,result)
+                if path == '/api/admin/btc' and self.command == 'POST':
+                    result = btc.action(db,uid,data,now,administrative=True)
+                    db.commit()
+                    return self.reply(200,result)
                 if path == '/api/admin/deposits' and self.command == 'GET':
                     offset = int(parse_qs(urlsplit(self.path).query).get('offset',['0'])[0])
                     if offset < 0:
@@ -793,6 +817,10 @@ class Handler(BaseHTTPRequestHandler):
                     return self.reply(200,{'message':'Operação administrativa concluída.'})
                 raise ValueError('Rota administrativa inválida.')
             message = None
+            if path == '/api/btc' and self.command == 'POST':
+                result = btc.action(db,uid,data,now)
+                db.commit()
+                return self.reply(200,result)
             if path == '/api/deposit' and self.command == 'POST':
                 result = deposit_action(db,uid,data,now)
                 db.commit()

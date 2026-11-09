@@ -60,6 +60,7 @@ function receive(result) {
   render();
   renderExchangeHistory();
   renderDeposits(result.depositConfig, result.deposits || []);
+  renderBitcoin(result.btcConfig, result.btcDeposits || []);
 }
 
 async function serverAction(action, fields = {}) {
@@ -279,6 +280,7 @@ setInterval(async () => {
   finally { requestBusy = false; }
 }, 2000);
 setInterval(() => { if (authenticated) { recordMetrics(); renderCharts(); } }, 15000);
+function startOnline(){
 showLogin();
 if (location.protocol === 'file:') {
   $('authMessage').textContent = 'Para abrir esta versão, extraia a pasta inteira e execute iniciar.bat. O jogo abrirá pelo servidor no navegador.';
@@ -291,6 +293,8 @@ if (location.protocol === 'file:') {
   });
 }
 
+}
+window.addEventListener('DOMContentLoaded',startOnline,{once:true});
 $('passwordVisibility').addEventListener('click', () => {
   const visible = $('loginPassword').type === 'password';
   $('loginPassword').type = visible ? 'text' : 'password';
