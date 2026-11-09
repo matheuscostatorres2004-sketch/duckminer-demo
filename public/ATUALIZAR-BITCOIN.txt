@@ -1,0 +1,17 @@
+Atualize somente public/index.html no GitHub.
+Abra Add file > Upload files na raiz e arraste a pasta public deste pacote.
+Confirme o caminho public/index.html e clique Commit changes.
+Aguarde Live no Render e recarregue com Ctrl+F5.
+
+Em Carteira, o painel Receber Bitcoin mostra o endereco fixo fornecido pelo
+operador, QR Code Bitcoin, botao Copiar e link Abrir na carteira.
+O QR Code codifica exatamente bitcoin:bc1qvlkvs46jn7jhsj2csa08qu73l62l37p3rfq72r
+O formato/checksum do endereco foi verificado. Isso nao comprova que o operador
+controle a carteira: confirme o endereco completo na carteira antes de usar.
+
+Este painel nao gera enderecos novos, nao consulta saldo BTC nem confirma
+pagamentos na rede, e nao converte automaticamente BTC em DCK. O mesmo endereco
+e exibido para todos os jogadores. Qualquer integracao de creditos deve usar
+registro persistente e identificar cada deposito antes da aprovacao.
+O historico de depositos DOGE e seu fluxo administrativo permanecem separados.
+Nao coloque chaves privadas, seed ou senha da carteira no GitHub.
