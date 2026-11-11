@@ -311,6 +311,30 @@ button:enabled:hover{filter:brightness(1.14)}
 .pool-summary .pool-countdown dd{color:var(--green);font-variant-numeric:tabular-nums}
 .pool-dashboard .pool-details-button{width:100%;padding:8px;font-weight:800}
 #poolDetailsDialog h2{margin-bottom:12px}
+
+#tab-wallet{max-width:1040px;margin:auto}
+#tab-wallet .wallet-heading{border-left:3px solid var(--green);background:#0d1019;margin-bottom:12px}
+#tab-wallet .wallet-layout{grid-template-columns:minmax(215px,285px) minmax(0,1fr);gap:24px}
+#tab-wallet .wallet-assets{gap:8px}
+#tab-wallet .wallet-assets h3{margin:0 0 4px;font-size:12px;color:var(--muted)}
+#tab-wallet .wallet-asset{min-height:62px;border-radius:7px;background:#10121c;border-color:#272d43;grid-template-columns:34px minmax(0,1fr) auto}
+#tab-wallet .wallet-asset[aria-pressed=true]{background:#081a15;border-color:var(--green);box-shadow:none}
+#tab-wallet .wallet-balance{text-align:right;font-variant-numeric:tabular-nums}
+#tab-wallet .wallet-balance strong{font-size:13px}
+#tab-wallet .wallet-network-label{font-size:11px}
+#tab-wallet .wallet-workspace{min-width:0;background:#080a11;border:1px solid var(--line);border-radius:9px;padding:0 16px 14px}
+#tab-wallet .wallet-actions{gap:5px;margin-bottom:0}
+#tab-wallet .wallet-actions button{padding:12px 10px}
+#tab-wallet .wallet-workspace .card{background:transparent;border-color:transparent;padding:15px 0;margin:0}
+#tab-wallet .wallet-workspace .wallet-rate{display:inline-block;padding:6px 9px;margin:0;background:#082218;border-radius:5px}
+#btcConversionForm label{display:block;margin:12px 0 6px;color:#e0e7f3}
+.wallet-amount-field{position:relative;max-width:390px}
+.wallet-amount-field #btcConversionAmount{width:100%;margin:0;padding-right:56px;min-height:42px}
+.wallet-amount-field span{position:absolute;right:28px;top:50%;transform:translateY(-50%);pointer-events:none;color:#ffc45e;font-size:12px;font-weight:750}
+.wallet-quote-box{max-width:390px;margin:9px 0 14px;padding:9px 12px;background:#0e1420;border:1px solid var(--line);border-radius:6px;color:var(--green)}
+.wallet-quote-box p{margin:0}
+#tab-wallet .wallet-network{margin:13px 0 0}
+@media(max-width:720px){#tab-wallet .wallet-layout{grid-template-columns:1fr;gap:9px}#tab-wallet .wallet-assets h3{grid-column:1/-1}#tab-wallet .wallet-asset{grid-template-columns:1fr;justify-items:start}#tab-wallet .wallet-balance{text-align:left}#tab-wallet .wallet-workspace{padding:0 12px 12px}}
 </style></head>
 
 
@@ -655,13 +679,13 @@ button:enabled:hover{filter:brightness(1.14)}
 
   <div class="wallet-layout">
 
-    <nav class="wallet-assets" aria-label="Moedas">
+    <nav class="wallet-assets" aria-label="Moedas"><h3>Moedas da carteira</h3>
 
-      <button type="button" id="walletAssetDck" class="wallet-asset" aria-pressed="true" onclick="selectWalletAsset('Dck')"><span class="wallet-symbol dck">DCK</span><span><strong>DCK</strong><small>DuckMiner</small></span><span id="walletCoins"></span></button>
+      <button type="button" id="walletAssetDck" class="wallet-asset" aria-pressed="true" onclick="selectWalletAsset('Dck')"><span class="wallet-symbol dck">DCK</span><span><strong>DCK</strong><small>DuckMiner</small></span><span class="wallet-balance"><small>Disponível</small><strong id="walletCoins"></strong></span></button>
 
-      <button type="button" id="walletAssetBtc" class="wallet-asset" aria-pressed="false" onclick="selectWalletAsset('Btc')"><span class="wallet-symbol btc">₿</span><span><strong>BTC</strong><small>Bitcoin</small></span></button>
+      <button type="button" id="walletAssetBtc" class="wallet-asset" aria-pressed="false" onclick="selectWalletAsset('Btc')"><span class="wallet-symbol btc">₿</span><span><strong>BTC</strong><small>Bitcoin</small></span><small class="wallet-network-label">Depósito</small></button>
 
-      <button type="button" id="walletAssetDoge" class="wallet-asset" aria-pressed="false" onclick="selectWalletAsset('Doge')"><span class="wallet-symbol doge">Ð</span><span><strong>DOGE</strong><small>Dogecoin</small></span></button>
+      <button type="button" id="walletAssetDoge" class="wallet-asset" aria-pressed="false" onclick="selectWalletAsset('Doge')"><span class="wallet-symbol doge">Ð</span><span><strong>DOGE</strong><small>Dogecoin</small></span><small class="wallet-network-label">Depósito</small></button>
 
     </nav>
 
@@ -683,7 +707,7 @@ button:enabled:hover{filter:brightness(1.14)}
 
 <p id="btcRate"></p><p id="btcConversionAvailability"></p>
 
-<form id="btcConversionForm"><label for="btcConversionAmount">Quantidade de BTC</label><input id="btcConversionAmount" type="number" min="0.00000001" max="21000000" step="0.00000001" required><p id="btcConversionPreview"></p><button type="submit" id="btcConversionSubmit">Solicitar conversão BTC → DCK</button></form>
+<form id="btcConversionForm"><label for="btcConversionAmount">Quantidade a converter</label><div class="wallet-amount-field"><input id="btcConversionAmount" type="number" min="0.00000001" max="21000000" step="0.00000001" placeholder="0,00000000" required><span>BTC</span></div><div class="wallet-quote-box"><p id="btcConversionPreview"></p></div><button type="submit" id="btcConversionSubmit">Solicitar conversão BTC → DCK</button></form>
 
 <p id="btcConversionMessage" role="status"></p>
 
