@@ -283,7 +283,7 @@ button:enabled:hover{filter:brightness(1.14)}
 .rack-position-empty{min-width:0;min-height:100%;aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:#e8f3f6;border:1px dashed #9fb4ba;background:#101a2160;border-radius:8px;padding:6px;font-size:11px}.rack-position-empty strong{color:var(--green);font-size:20px}.rack-position-empty small{font-weight:400;color:#d0dee2}
 @media(max-width:740px){.mining-room-layout{grid-template-columns:1fr}.mining-room-layout .room-panels{grid-template-columns:repeat(3,minmax(0,1fr))}.mining-room-floor .racks{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:520px){.mining-room-layout .room-panels{grid-template-columns:repeat(2,minmax(0,1fr))}.mining-room-layout .room-panels>.room-missions{grid-column:1/-1}.mining-room-floor .racks{grid-template-columns:repeat(2,minmax(0,1fr))}}
-</style></head>
+.rack-controls{display:flex;justify-content:space-between;align-items:center;gap:4px;flex-wrap:wrap}.rack-controls button{font-size:10px;padding:4px 6px}</style></head>
 
 
 
@@ -1881,7 +1881,7 @@ function chooseRackPosition(position) {
   }
 }
 function render(){
-  $("rackStock").textContent = (game.rackStock || 0) + " rack(s) Duck Básico disponíveis";
+  $("rackStock").textContent = (game.rackStock || 0) + " rack(s) disponíveis";
 
 
 
@@ -1914,7 +1914,7 @@ $("online").textContent=new Date(game.seconds*1000).toISOString().slice(11,19);
 
 
 const positions = game.rackPositions || game.racks.map((_, index) => index);
-$("racks").innerHTML=Array.from({length:MAX_RACKS},(_,position)=>{const r=positions.indexOf(position);const rack=game.racks[r];return rack ? `<div class="rack"><h3>RACK ${position+1}</h3><div class="rack-frame ${rack.length === 4 ? "rack-frame-photo" : ""}"><div class="slots">${rack.map((m,s)=>`<div class="slot ${m?"filled":""}" ondragover="allowDrop(event)" ondragleave="this.classList.remove('over')" ondrop="dropMachine(event,${r},${s})" onclick="clickSlot(${r},${s})">${m?`<div draggable="true" ondragstart="dragRack(event,${r},${s})"><b>${m.name} • ${m.rarity||"Comum"} • Nv.${m.level||0}</b><small>${m.power} TH/s • ${m.watts} W</small><small>Arraste para mover</small></div>`:`<span>＋ ESPAÇO VAZIO<small>Rack ${r+1} • Slot ${s+1}</small></span>`}</div>`).join("")}</div></div></div>` : `<button type="button" class="rack-position-empty" onclick="chooseRackPosition(${position})"><strong>+</strong><span>Lugar ${position+1}</span><small>${game.rackStock ? "Instalar rack" : "Comprar rack"}</small></button>`;}).join("");
+$("racks").innerHTML=Array.from({length:MAX_RACKS},(_,position)=>{const r=positions.indexOf(position);const rack=game.racks[r];return rack ? `<div class="rack"><div class="rack-controls"><h3>RACK ${position+1}</h3><button type="button" class="danger" onclick="removeRack(${position})" aria-label="Remover rack ${position+1}">Remover</button></div><div class="rack-frame ${rack.length === 4 ? "rack-frame-photo" : ""}"><div class="slots">${rack.map((m,s)=>`<div class="slot ${m?"filled":""}" ondragover="allowDrop(event)" ondragleave="this.classList.remove('over')" ondrop="dropMachine(event,${r},${s})" onclick="clickSlot(${r},${s})">${m?`<div draggable="true" ondragstart="dragRack(event,${r},${s})"><b>${m.name} • ${m.rarity||"Comum"} • Nv.${m.level||0}</b><small>${m.power} TH/s • ${m.watts} W</small><small>Arraste para mover</small></div>`:`<span>＋ ESPAÇO VAZIO<small>Rack ${r+1} • Slot ${s+1}</small></span>`}</div>`).join("")}</div></div></div>` : `<button type="button" class="rack-position-empty" onclick="chooseRackPosition(${position})"><strong>+</strong><span>Lugar ${position+1}</span><small>${game.rackStock ? "Instalar rack" : "Comprar rack"}</small></button>`;}).join("");
 for (const frame of $("racks").querySelectorAll(".rack-frame-photo")) {
   frame.prepend($("rackPhotoTemplate").content.cloneNode(true));
 }

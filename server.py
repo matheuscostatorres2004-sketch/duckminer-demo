@@ -266,10 +266,24 @@ def act(s, data):
         positions = s.setdefault('rackPositions', list(range(len(s['racks']))))
         if position in positions or len(s['racks']) >= 12 or s.get('rackStock', 0) < 1:
             raise ValueError('Lugar ocupado ou sem rack no estoque.')
-        s['racks'].append([None] * SLOTS)
+        saved_sizes = s.get('returnedRackSizes', [])
+        size = saved_sizes.pop(0) if saved_sizes else SLOTS
+        s['racks'].append([None] * size)
         positions.append(position)
         s['rackStock'] -= 1
         message = f'Rack instalado no lugar {position + 1}.'
+    elif name == 'remove_rack':
+        position = integer(data, 'position', high=11)
+        positions = s.setdefault('rackPositions', list(range(len(s['racks']))))
+        if position not in positions:
+            raise ValueError('Não há rack neste lugar.')
+        index = positions.index(position)
+        rack = s['racks'].pop(index)
+        positions.pop(index)
+        s['inventory'].extend(machine for machine in rack if machine)
+        s['rackStock'] = s.get('rackStock', 0) + 1
+        s.setdefault('returnedRackSizes', []).append(len(rack))
+        message = 'Rack e máquinas devolvidos ao estoque.'
     elif name == 'cooling':
         spend(s, 1200 + s['cooling']*900)
         s['cooling'] += 1

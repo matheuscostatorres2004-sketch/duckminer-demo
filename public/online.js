@@ -304,3 +304,9 @@ $('passwordVisibility').addEventListener('click', () => {
   $('passwordVisibility').setAttribute('aria-label', visible ? 'Ocultar senha' : 'Mostrar senha');
   $('passwordVisibility').setAttribute('aria-pressed', String(visible));
 });
+
+function removeRack(position) {
+  if (confirm('Remover este rack? O rack e as máquinas instaladas voltarão ao estoque.')) {
+    return serverAction('remove_rack', {position});
+  }
+}
