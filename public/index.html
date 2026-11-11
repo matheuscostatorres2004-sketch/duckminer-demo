@@ -335,6 +335,17 @@ button:enabled:hover{filter:brightness(1.14)}
 .wallet-quote-box p{margin:0}
 #tab-wallet .wallet-network{margin:13px 0 0}
 @media(max-width:720px){#tab-wallet .wallet-layout{grid-template-columns:1fr;gap:9px}#tab-wallet .wallet-assets h3{grid-column:1/-1}#tab-wallet .wallet-asset{grid-template-columns:1fr;justify-items:start}#tab-wallet .wallet-balance{text-align:left}#tab-wallet .wallet-workspace{padding:0 12px 12px}}
+
+#tab-settings{max-width:1000px;margin:auto}
+.player-profile{padding:19px;background:#0b0d14}
+.profile-layout{display:grid;grid-template-columns:minmax(215px,1fr) minmax(270px,1.2fr);gap:18px;align-items:start}
+.profile-overview{display:flex;align-items:center;gap:13px;margin-bottom:12px;min-width:0}
+.profile-avatar{display:grid;place-items:center;width:78px;height:78px;flex-shrink:0;border:1px solid var(--green);border-radius:9px;background:radial-gradient(circle at 30% 20%,#164839,#07131c);color:var(--green);font-size:30px;font-weight:800}
+.profile-player{min-width:0}.profile-player h3,.profile-account dd{overflow-wrap:anywhere}.profile-player h3{color:#f4f7ff;font-size:20px;margin:3px 0}.profile-label,.profile-player p{font-size:12px;color:var(--muted);margin:3px 0}
+.profile-account{display:grid;gap:9px;margin:0 0 12px}.profile-account>div,.profile-box{background:#10121c;border:1px solid var(--line);border-radius:8px}.profile-account dt,.profile-box h3{background:#0a0c15;color:#74efff;padding:9px 11px;font-weight:700;font-size:13px;margin:0;border-radius:8px 8px 0 0}.profile-account dd{margin:0;padding:10px 11px;color:#eef4ff}
+.profile-panels{display:grid;gap:12px}.profile-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:0;padding:12px}.profile-stats>div{background:#090d17;padding:8px;border-radius:5px}.profile-stats dt{font-size:11px;color:var(--muted)}.profile-stats dd{margin:4px 0 0;color:var(--green);font-weight:750}
+#playerSettings{padding:0 12px 12px}#playerSettings label{display:inline-block;margin-bottom:5px}#playerSettings input,#playerSettings select{width:min(100%,310px)}
+@media(max-width:650px){.profile-layout{grid-template-columns:1fr}.player-profile{padding:12px}}
 </style></head>
 
 
@@ -785,23 +796,43 @@ button:enabled:hover{filter:brightness(1.14)}
 
 
 
-<section hidden id="tab-history"><div class="card"><h2>Histórico</h2><div id="events">Bem-vindo!</div></div><div class="card"></div></section><section hidden id="tab-progress"><div class="card"><h2>Progresso</h2><div class="row"><button class="secondary" onclick="save(true)">Salvar jogo</button></div><p class="hint">Seu progresso fica salvo na sua conta neste servidor. DCK é uma moeda fictícia.</p></div><div class="card"></div></section><section hidden id="tab-settings"><div class="card">
-
+<section hidden id="tab-history"><div class="card"><h2>Histórico</h2><div id="events">Bem-vindo!</div></div><div class="card"></div></section><section hidden id="tab-progress"><div class="card"><h2>Progresso</h2><div class="row"><button class="secondary" onclick="save(true)">Salvar jogo</button></div><p class="hint">Seu progresso fica salvo na sua conta neste servidor. DCK é uma moeda fictícia.</p></div><div class="card"></div></section><section hidden id="tab-settings">
+<div class="card player-profile">
 <h2>Perfil</h2>
-
-<p>Nome do jogador: <strong id="settingsAccount"></strong></p><p>E-mail de acesso: <strong id="settingsEmail"></strong></p><form id="linkEmailForm" hidden><h3>Vincular e-mail à conta antiga</h3><label>E-mail <input id="linkEmail" type="email" required maxlength="254" autocomplete="email"></label><label>Senha atual <input id="linkPassword" type="password" required minlength="10" maxlength="128" autocomplete="current-password"></label><button type="submit">Cadastrar e-mail</button><p id="linkEmailMessage" role="status"></p></form>
-
-<form id="playerSettings">
+<div class="profile-layout">
+  <div class="profile-identity">
+    <div class="profile-overview">
+      <div class="profile-avatar" id="profileAvatar" aria-hidden="true"></div>
+      <div class="profile-player"><span class="profile-label">Jogador</span><h3 id="profileDisplayName"></h3><p id="profileRank"></p></div>
+    </div>
+    <dl class="profile-account">
+      <div><dt>Nome de acesso</dt><dd id="settingsAccount"></dd></div>
+      <div><dt>E-mail de acesso</dt><dd id="settingsEmail"></dd></div>
+    </dl>
+    <form id="linkEmailForm" hidden><h3>Vincular e-mail à conta antiga</h3><label>E-mail <input id="linkEmail" type="email" required maxlength="254" autocomplete="email"></label><label>Senha atual <input id="linkPassword" type="password" required minlength="10" maxlength="128" autocomplete="current-password"></label><button type="submit">Cadastrar e-mail</button><p id="linkEmailMessage" role="status"></p></form>
+  </div>
+  <div class="profile-panels">
+    <div class="profile-box"><h3>Atividade de mineração</h3>
+      <dl class="profile-stats">
+        <div><dt>Poder ativo</dt><dd id="profilePower">0 TH/s</dd></div>
+        <div><dt>Máquinas instaladas</dt><dd id="profileMachines">0</dd></div>
+        <div><dt>Racks instalados</dt><dd id="profileRacks">0</dd></div>
+        <div><dt>Total minerado</dt><dd id="profileMined">0 DCK</dd></div>
+      </dl>
+    </div>
+    <div class="profile-box"><h3>Editar perfil</h3><form id="playerSettings">
 
 <p><label for="settingsName">Nome de exibição</label><br><input id="settingsName" minlength="2" maxlength="24" required autocomplete="nickname"></p>
 
 <p><label for="settingsZoom">Tamanho do jogo</label><br><select id="settingsZoom"><option value="75">75%</option><option value="90">90%</option><option value="100">100%</option><option value="110">110%</option><option value="125">125%</option></select></p>
 
-<button type="submit">Salvar configurações</button>
+<button type="submit">Salvar perfil</button>
 
-</form>
-
-</div></section><section id="tab-admin" hidden><div class="card">
+</form></div>
+  </div>
+</div>
+</div>
+</section><section id="tab-admin" hidden><div class="card">
 
 <h2>Administração</h2>
 
@@ -1877,7 +1908,19 @@ function chooseRackPosition(position) {
     filterMarket('racks');
   }
 }
+function renderProfile(){
+  const displayName = game.settings?.displayName || $("settingsAccount").textContent;
+  $("profileDisplayName").textContent = displayName;
+  $("profileAvatar").textContent = Array.from(displayName).slice(0,2).join("").toUpperCase();
+  const rank = typeof rankingState === "undefined" ? -1 : rankingState.findIndex(player => player.mine);
+  $("profileRank").textContent = rank < 0 ? "" : "Posição no ranking: " + (rank + 1);
+  $("profilePower").textContent = fmt(game.running ? power() : 0) + " TH/s";
+  $("profileMachines").textContent = allMachines().length;
+  $("profileRacks").textContent = game.racks.length;
+  $("profileMined").textContent = lmt(game.total);
+}
 function render(){
+  renderProfile();
   $("rackStock").textContent = (game.rackStock || 0) + " rack(s) disponíveis";
 
 
