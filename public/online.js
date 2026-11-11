@@ -73,7 +73,7 @@ async function serverAction(action, fields = {}) {
     receive(result);
     $('connectionStatus').textContent = result.message || 'Dados atualizados.';
     if (result.message) {
-      $('purchaseNotice').textContent = '✓ ' + result.message;
+      $('purchaseNotice').textContent = result.message;
       clearTimeout(purchaseNoticeTimer);
       purchaseNoticeTimer = setTimeout(() => $('purchaseNotice').textContent = '', 4500);
     }
