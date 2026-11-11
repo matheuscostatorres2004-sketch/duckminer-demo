@@ -264,8 +264,8 @@ def act(s, data):
     elif name == 'clear_balance':
         s['coins'] = 0
     elif name == 'expand':
-        if len(s['racks']) >= 8:
-            raise ValueError('Limite de oito racks.')
+        if len(s['racks']) >= 12:
+            raise ValueError('Limite de 12 racks.')
         size = data.get('size', SLOTS)
         if type(size) is not int or size != SLOTS:
             raise ValueError('Tamanho de rack inválido.')
