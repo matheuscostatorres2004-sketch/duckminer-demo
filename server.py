@@ -188,14 +188,15 @@ def integer(data, key, low=0, high=10**9):
 
 
 def spend(s, cost):
-    if s['coins'] < cost * UNIT:
+    units = int(cost * UNIT)
+    if s['coins'] < units:
         raise ValueError('Saldo insuficiente.')
-    s['coins'] -= cost * UNIT
+    s['coins'] -= units
 
 
 def new_machine(index):
     return {**MODELS[index], 'id': secrets.randbelow(2**48), 'level': 0,
-            'baseCost': MODELS[index]['cost']}
+            'baseCost': MODELS[index]['cost'], 'rarity': 'Basic'}
 
 
 def slot(s, data, prefix=''):
@@ -257,10 +258,10 @@ def act(s, data):
         size = data.get('size', SLOTS)
         if type(size) is not int or size != SLOTS:
             raise ValueError('Tamanho de rack inválido.')
-        cost = 2500 + max(0, owned - 3) * 2000
+        cost = Decimal('0.05')
         spend(s, cost)
         s['rackStock'] = stock + 1
-        message = f'Rack enviado ao estoque · {cost} DCK'
+        message = 'Rack enviado ao estoque · 0,05 DCK'
     elif name == 'install_rack':
         position = integer(data, 'position', high=11)
         positions = s.setdefault('rackPositions', list(range(len(s['racks']))))
@@ -331,7 +332,6 @@ def act(s, data):
         rarity = random.choices(range(4), weights=[30,45,20,5] if premium else [75,20,4,1])[0]
         pools = [list(range(4)), [2,3,4], [5], [6]]
         m = new_machine(random.choice(pools[rarity]))
-        m['rarity'] = ['Comum','Rara','Épica','Lendária'][rarity]
         s['inventory'].append(m)
         s['crateCount'] += 1
         count(s, 'crate')

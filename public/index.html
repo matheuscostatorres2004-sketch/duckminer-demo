@@ -283,7 +283,7 @@ button:enabled:hover{filter:brightness(1.14)}
 .rack-position-empty{min-width:0;min-height:100%;aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:#e8f3f6;border:1px dashed #9fb4ba;background:#101a2160;border-radius:8px;padding:6px;font-size:11px}.rack-position-empty strong{color:var(--green);font-size:20px}.rack-position-empty small{font-weight:400;color:#d0dee2}
 @media(max-width:740px){.mining-room-layout{grid-template-columns:1fr}.mining-room-layout .room-panels{grid-template-columns:repeat(3,minmax(0,1fr))}.mining-room-floor .racks{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:520px){.mining-room-layout .room-panels{grid-template-columns:repeat(2,minmax(0,1fr))}.mining-room-layout .room-panels>.room-missions{grid-column:1/-1}.mining-room-floor .racks{grid-template-columns:repeat(2,minmax(0,1fr))}}
-.rack-controls{display:flex;justify-content:space-between;align-items:center;gap:4px;flex-wrap:wrap}.rack-controls button{font-size:10px;padding:4px 6px}</style></head>
+.rack-controls{display:flex;justify-content:space-between;align-items:center;gap:4px;flex-wrap:wrap}.rack-controls button{font-size:10px;padding:4px 6px}#marketRarity{border-color:#42ffac80;background:#051c17}#marketRarity h3{color:var(--green)}#marketRarity button[aria-pressed=true]{background:var(--green);color:#062016;box-shadow:0 0 12px #42ffac55}</style></head>
 
 
 
@@ -375,7 +375,7 @@ button:enabled:hover{filter:brightness(1.14)}
 
 
 
-</nav><details id="extraMenu"><summary aria-label="Abrir menu de histórico e progresso">Menu</summary><div class="extra-menu-items"><button onclick="showTab('inventory')">Estoque</button><button onclick="showTab('upgrades')">Melhorias</button>
+</nav><details id="extraMenu"><summary aria-label="Abrir menu do DuckMiner">Menu</summary><div class="extra-menu-items"><button onclick="showTab('inventory')">Estoque</button>
 
 
 
@@ -395,7 +395,7 @@ button:enabled:hover{filter:brightness(1.14)}
 
 
 
-<button onclick="showTab('daily',this)">Diário</button>
+
 
 
 
@@ -403,7 +403,7 @@ button:enabled:hover{filter:brightness(1.14)}
 
 
 
-<button onclick="showTab('history')">Histórico</button><button onclick="showTab('progress')">Progresso</button><button onclick="showTab('settings')">Perfil</button><button id="adminMenuButton" hidden onclick="showTab('admin')">Administração</button></div></details></div>
+<button onclick="showTab('settings')">Perfil</button><button id="adminMenuButton" hidden onclick="showTab('admin')">Administração</button></div></details></div>
 
 
 
@@ -419,7 +419,7 @@ button:enabled:hover{filter:brightness(1.14)}
 
 
 
-<div class="stat"><small>Energia</small><b id="energy">0 W</b></div>
+
 
 
 
@@ -617,16 +617,7 @@ button:enabled:hover{filter:brightness(1.14)}
     </div>
 
     <div class="market-filter-group" id="marketRarity"><h3>Raridade</h3>
-
-      <button type="button" data-rarity="Todas" onclick="filterRarity('Todas')">Todas</button>
-
-      <button type="button" data-rarity="Comum" onclick="filterRarity('Comum')">Comum</button>
-
-      <button type="button" data-rarity="Rara" onclick="filterRarity('Rara')">Rara</button>
-
-      <button type="button" data-rarity="Épica" onclick="filterRarity('Épica')">Épica</button>
-
-      <button type="button" data-rarity="Lendária" onclick="filterRarity('Lendária')">Lendária</button>
+      <button type="button" data-rarity="Basic" onclick="filterRarity('Basic')">Basic</button>
 
     </div>
 
@@ -658,7 +649,7 @@ button:enabled:hover{filter:brightness(1.14)}
 
 
 
-<section hidden="" id="tab-charts"><div class="card"><h2>Gráficos de desempenho</h2><div class="stats"><div class="stat"><small>Total minerado</small><b id="total">0 DCK</b></div></div><p class="hint">Amostras a cada 15 segundos enquanto o jogo está aberto.</p><div class="grid"><div class="chartbox"><h3>Saldo DCK</h3><canvas id="chartBalance"></canvas></div><div class="chartbox"><h3>Poder TH/s</h3><canvas id="chartPower"></canvas></div><div class="chartbox"><h3>Total minerado</h3><canvas id="chartMined"></canvas></div><div class="chartbox"><h3>Consumo W</h3><canvas id="chartWatts"></canvas></div></div><button onclick="recordMetrics();renderCharts()">Registrar agora</button></div></section>
+<section hidden="" id="tab-charts"><div class="card"><h2>Gráficos de desempenho</h2><div class="stats"><div class="stat"><small>Total minerado</small><b id="total">0 DCK</b></div></div><p class="hint">Amostras a cada 15 segundos enquanto o jogo está aberto.</p><div class="grid"><div class="chartbox"><h3>Saldo DCK</h3><canvas id="chartBalance"></canvas></div><div class="chartbox"><h3>Poder TH/s</h3><canvas id="chartPower"></canvas></div><div class="chartbox"><h3>Total minerado</h3><canvas id="chartMined"></canvas></div></div><button onclick="recordMetrics();renderCharts()">Registrar agora</button></div></section>
 
 
 
@@ -666,7 +657,7 @@ button:enabled:hover{filter:brightness(1.14)}
 
 
 
-<section hidden="" id="tab-crates"><div class="card"><button onclick="showTab('shop')">Voltar à Loja</button><h2>Caixas de equipamentos</h2><p class="hint">Prêmios aleatórios com probabilidades exibidas. As máquinas vão para o estoque.</p><div class="grid"><div class="crate"><h3>Caixa Básica</h3><p>250 DCK</p><p class="hint">Comum 75% • Rara 20% • Épica 4% • Lendária 1%</p><button onclick="openCrate(false)">Abrir</button></div><div class="crate"><h3>Caixa Premium</h3><p>2.000 DCK</p><p class="hint">Comum 30% • Rara 45% • Épica 20% • Lendária 5%</p><button onclick="openCrate(true)">Abrir</button></div></div><div class="mission" id="crateResult" style="margin-top:12px">Nenhuma caixa aberta nesta sessão.</div></div></section>
+<section hidden="" id="tab-crates"><div class="card"><button onclick="showTab('shop')">Voltar à Loja</button><h2>Caixas de equipamentos</h2><p class="hint">Prêmios aleatórios com probabilidades exibidas. As máquinas vão para o estoque.</p><div class="grid"><div class="crate"><h3>Caixa Básica</h3><p>250 DCK</p><p class="hint">Inclui uma máquina Basic.</p><button onclick="openCrate(false)">Abrir</button></div><div class="crate"><h3>Caixa Premium</h3><p>2.000 DCK</p><p class="hint">Inclui uma máquina Basic. Chances maiores de modelos mais potentes.</p><button onclick="openCrate(true)">Abrir</button></div></div><div class="mission" id="crateResult" style="margin-top:12px">Nenhuma caixa aberta nesta sessão.</div></div></section>
 
 
 
@@ -868,7 +859,7 @@ const models=[
 
 
 
-const legendaryModels=[{name:"Duck Prisma",power:4200,cost:5500,watts:900,icon:"",rarity:"Rara"},{name:"Duck Titã",power:8500,cost:13000,watts:1450,icon:"",rarity:"Épica"},{name:"Duck Fênix",power:16000,cost:31000,watts:2100,icon:"",rarity:"Lendária"}];
+const legendaryModels=[{name:"Duck Prisma",power:4200,cost:5500,watts:900,icon:"",rarity:"Basic"},{name:"Duck Titã",power:8500,cost:13000,watts:1450,icon:"",rarity:"Basic"},{name:"Duck Fênix",power:16000,cost:31000,watts:2100,icon:"",rarity:"Basic"}];
 
 
 
@@ -1007,7 +998,7 @@ function showPurchase(item, cost){
 
 
 
-function buy(i){let m=[...models,...legendaryModels][i];if(game.balance<m.cost)return alert("Saldo insuficiente!");game.balance-=m.cost;countMission("machine");game.inventory.push({...m,rarity:m.rarity||"Comum",id:Date.now()+Math.random(),level:0,baseCost:m.cost});addEvent("Comprou "+m.name);render();save();showPurchase(m.name, m.cost)}
+function buy(i){let m=[...models,...legendaryModels][i];if(game.balance<m.cost)return alert("Saldo insuficiente!");game.balance-=m.cost;countMission("machine");game.inventory.push({...m,rarity:m.rarity||"Basic",id:Date.now()+Math.random(),level:0,baseCost:m.cost});addEvent("Comprou "+m.name);render();save();showPurchase(m.name, m.cost)}
 
 
 
@@ -1751,7 +1742,7 @@ function renderTimedMissions(){
 
 let marketCategory = 'miners';
 
-let marketRarity = 'Todas';
+let marketRarity = 'Basic';
 
 let marketCards = '';
 
@@ -1825,9 +1816,9 @@ function renderMarket(){
 
     products = [...models,...legendaryModels].map((model,index) => ({
 
-      name:model.name, rarity:model.rarity || 'Comum', kind:'miner',
+      name:model.name, rarity:'Basic', kind:'miner',
 
-      details:`${fmt(model.power)} TH/s · Consumo: ${fmt(model.watts)} W`,
+      details:`${fmt(model.power)} TH/s`,
 
       price:model.cost, action:`buy(${index})`
 
@@ -1836,20 +1827,20 @@ function renderMarket(){
   } else if (marketCategory === 'racks') {
     const owned = game.racks.length + (game.rackStock || 0);
     const limit = owned >= MAX_RACKS;
-    const basePrice = 2500 + Math.max(0, owned - 3) * 2000;
+    const basePrice = 0.05;
     products = [[4,'Rack Duck Básico']].map(([size,name]) => ({
       name, rarity:'Estrutura', kind:'rack',
       details:`Adiciona ${size} espaços à sala. Racks adquiridos: ${owned}/${MAX_RACKS}. Vai para o estoque.`,
-      price:basePrice + (size - 4) * 750, action:`expandRoom(${size})`,
+      price:basePrice, action:`expandRoom(${size})`,
       button:limit ? 'Limite atingido' : 'Comprar rack', disabled:limit
     }));
   } else {
 
     products = [
 
-      {name:'Caixa Básica',rarity:'Caixa',kind:'crate',details:'Comum 75% · Rara 20% · Épica 4% · Lendária 1%',price:250,action:'openCrate(false)',button:'Abrir caixa'},
+      {name:'Caixa Básica',rarity:'Caixa',kind:'crate',details:'Inclui uma máquina Basic.',price:250,action:'openCrate(false)',button:'Abrir caixa'},
 
-      {name:'Caixa Premium',rarity:'Premium',kind:'crate',details:'Comum 30% · Rara 45% · Épica 20% · Lendária 5%',price:2000,action:'openCrate(true)',button:'Abrir caixa'}
+      {name:'Caixa Premium',rarity:'Premium',kind:'crate',details:'Inclui uma máquina Basic. Chances maiores de modelos mais potentes.',price:2000,action:'openCrate(true)',button:'Abrir caixa'}
 
     ];
 
@@ -1897,7 +1888,7 @@ syncMining();
 
 
 
-$("balance").textContent=lmt(game.balance);$("total").textContent=lmt(game.total);$("energy").textContent=watts()+" W";
+$("balance").textContent=lmt(game.balance);$("total").textContent=lmt(game.total);
 
 
 
@@ -1905,7 +1896,7 @@ $("roomInfo").textContent=allMachines().length+" máquinas instaladas • "+game
 
 
 
-$("rackPrice").textContent="Racks a partir de "+lmt(2500+Math.max(0,game.racks.length+(game.rackStock||0)-3)*2000);
+$("rackPrice").textContent="Rack: "+lmt(0.05);
 
 
 
@@ -1914,7 +1905,7 @@ $("online").textContent=new Date(game.seconds*1000).toISOString().slice(11,19);
 
 
 const positions = game.rackPositions || game.racks.map((_, index) => index);
-$("racks").innerHTML=Array.from({length:MAX_RACKS},(_,position)=>{const r=positions.indexOf(position);const rack=game.racks[r];return rack ? `<div class="rack"><div class="rack-controls"><h3>RACK ${position+1}</h3><button type="button" class="danger" onclick="removeRack(${position})" aria-label="Remover rack ${position+1}">Remover</button></div><div class="rack-frame ${rack.length === 4 ? "rack-frame-photo" : ""}"><div class="slots">${rack.map((m,s)=>`<div class="slot ${m?"filled":""}" ondragover="allowDrop(event)" ondragleave="this.classList.remove('over')" ondrop="dropMachine(event,${r},${s})" onclick="clickSlot(${r},${s})">${m?`<div draggable="true" ondragstart="dragRack(event,${r},${s})"><b>${m.name} • ${m.rarity||"Comum"} • Nv.${m.level||0}</b><small>${m.power} TH/s • ${m.watts} W</small><small>Arraste para mover</small></div>`:`<span>＋ ESPAÇO VAZIO<small>Rack ${r+1} • Slot ${s+1}</small></span>`}</div>`).join("")}</div></div></div>` : `<button type="button" class="rack-position-empty" onclick="chooseRackPosition(${position})"><strong>+</strong><span>Lugar ${position+1}</span><small>${game.rackStock ? "Instalar rack" : "Comprar rack"}</small></button>`;}).join("");
+$("racks").innerHTML=Array.from({length:MAX_RACKS},(_,position)=>{const r=positions.indexOf(position);const rack=game.racks[r];return rack ? `<div class="rack"><div class="rack-controls"><h3>RACK ${position+1}</h3><button type="button" class="danger" onclick="removeRack(${position})" aria-label="Remover rack ${position+1}">Remover</button></div><div class="rack-frame ${rack.length === 4 ? "rack-frame-photo" : ""}"><div class="slots">${rack.map((m,s)=>`<div class="slot ${m?"filled":""}" ondragover="allowDrop(event)" ondragleave="this.classList.remove('over')" ondrop="dropMachine(event,${r},${s})" onclick="clickSlot(${r},${s})">${m?`<div draggable="true" ondragstart="dragRack(event,${r},${s})"><b>${m.name} • ${m.rarity||"Basic"} • Nv.${m.level||0}</b><small>${m.power} TH/s • ${m.watts} W</small><small>Arraste para mover</small></div>`:`<span>＋ ESPAÇO VAZIO<small>Rack ${r+1} • Slot ${s+1}</small></span>`}</div>`).join("")}</div></div></div>` : `<button type="button" class="rack-position-empty" onclick="chooseRackPosition(${position})"><strong>+</strong><span>Lugar ${position+1}</span><small>${game.rackStock ? "Instalar rack" : "Comprar rack"}</small></button>`;}).join("");
 for (const frame of $("racks").querySelectorAll(".rack-frame-photo")) {
   frame.prepend($("rackPhotoTemplate").content.cloneNode(true));
 }

@@ -39,6 +39,7 @@ function receive(result) {
   game = result.game;
   for (const machine of [...game.inventory, ...game.racks.flat().filter(Boolean)]) {
     machine.name = machine.name.replace(/^Antminer\b/, 'Duck');
+    machine.rarity = 'Basic';
   }
   game.history = game.history.map(entry => entry.replace(/\bAntminer\b/g, 'Duck'));
   game.metrics = metrics;
