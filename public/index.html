@@ -286,7 +286,7 @@ button:enabled:hover{filter:brightness(1.14)}
 
         </div>
 
-        <p id="legacyLoginHint" class="hint">Conta antiga sem e-mail? Use seu nome de acesso e cadastre um e-mail em Configurações.</p>
+        <p id="legacyLoginHint" class="hint">Conta antiga sem e-mail? Use seu nome de acesso e cadastre um e-mail em Perfil.</p>
 
 <div id="registerFields" hidden>
 
@@ -372,7 +372,7 @@ button:enabled:hover{filter:brightness(1.14)}
 
 
 
-<button onclick="showTab('history')">Histórico</button><button onclick="showTab('progress')">Progresso</button><button onclick="showTab('settings')">Configurações</button><button id="adminMenuButton" hidden onclick="showTab('admin')">Administração</button></div></details></div>
+<button onclick="showTab('history')">Histórico</button><button onclick="showTab('progress')">Progresso</button><button onclick="showTab('settings')">Perfil</button><button id="adminMenuButton" hidden onclick="showTab('admin')">Administração</button></div></details></div>
 
 
 
@@ -794,7 +794,7 @@ button:enabled:hover{filter:brightness(1.14)}
 
 <section hidden id="tab-history"><div class="card"><h2>Histórico</h2><div id="events">Bem-vindo!</div></div><div class="card"></div></section><section hidden id="tab-progress"><div class="card"><h2>Progresso</h2><div class="row"><button class="secondary" onclick="save(true)">Salvar jogo</button></div><p class="hint">Seu progresso fica salvo na sua conta neste servidor. DCK é uma moeda fictícia.</p></div><div class="card"></div></section><section hidden id="tab-settings"><div class="card">
 
-<h2>Configurações do jogador</h2>
+<h2>Perfil</h2>
 
 <p>Nome do jogador: <strong id="settingsAccount"></strong></p><p>E-mail de acesso: <strong id="settingsEmail"></strong></p><form id="linkEmailForm" hidden><h3>Vincular e-mail à conta antiga</h3><label>E-mail <input id="linkEmail" type="email" required maxlength="254" autocomplete="email"></label><label>Senha atual <input id="linkPassword" type="password" required minlength="10" maxlength="128" autocomplete="current-password"></label><button type="submit">Cadastrar e-mail</button><p id="linkEmailMessage" role="status"></p></form>
 
