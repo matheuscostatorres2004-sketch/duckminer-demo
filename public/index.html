@@ -302,6 +302,15 @@ button:enabled:hover{filter:brightness(1.14)}
 .mining-room-floor .rack-frame-photo .slot{height:92%;max-height:92%;padding:2px}
 .mining-room-floor .rack-frame-photo .slot.filled{height:100%;max-height:100%;padding:0}
 .rack-frame-photo .slot.filled .machine-photo{width:100%;height:100%}
+
+.room-panels .pool-dashboard{padding:12px}
+.pool-summary{margin:0 0 12px}
+.pool-summary>div{display:flex;flex-direction:column;gap:2px;padding:8px 4px;border-bottom:1px solid var(--line)}
+.pool-summary dt{font-size:11px;color:var(--muted);font-weight:600}
+.pool-summary dd{margin:0;color:#f4f7ff;font-size:16px;font-weight:800;overflow-wrap:anywhere}
+.pool-summary .pool-countdown dd{color:var(--green);font-variant-numeric:tabular-nums}
+.pool-dashboard .pool-details-button{width:100%;padding:8px;font-weight:800}
+#poolDetailsDialog h2{margin-bottom:12px}
 </style></head>
 
 
@@ -466,86 +475,26 @@ button:enabled:hover{filter:brightness(1.14)}
 
 
 
-<div class="room-panels"><div class="card pool-panel">
-
-
-
-    <h2>Pool DCK</h2>
-
-
-
-    
-
-
-
-    <div class="stats">
-
-
-
-  <div class="stat"><small>Poder da rede</small><b id="poolNetworkPower"></b></div>
-
-
-
-  <div class="stat"><small>Recompensa por rodada</small><b id="poolReward"></b></div>
-
-
-
-</div>
-
-
-
-
-
-
-
-<details class="pool-details">
-
-
-
-  <summary>Detalhes da Pool DCK</summary>
-
-
-
-  <dl>
-
-
-
-    <dt>Seu poder ativo</dt><dd id="poolYourPower"></dd>
-
-
-
-    <dt>Poder dos outros jogadores</dt><dd id="poolRivalPower"></dd>
-
-
-
-    <dt>Sua participação atual</dt><dd id="poolShare"></dd>
-
-
-
-    <dt>Progresso da rodada</dt><dd><progress id="poolRound" aria-label="Progresso da rodada"></progress> <span id="poolElapsed"></span></dd>
-
-
-
-    <dt>Última recompensa recebida</dt><dd id="poolLast"></dd>
-
-
-
+<div class="room-panels"><div class="card pool-panel pool-dashboard">
+  <h2>Pool DCK</h2>
+  <dl class="pool-summary">
+    <div><dt>Meu poder ativo</dt><dd id="poolYourPower">0 TH/s</dd></div>
+    <div><dt>Poder da rede</dt><dd id="poolNetworkPower">0 TH/s</dd></div>
+    <div><dt>Prêmio por rodada</dt><dd id="poolReward">0 DCK</dd></div>
+    <div class="pool-countdown"><dt>Próxima rodada</dt><dd id="poolCountdown">01:00</dd></div>
   </dl>
-
-
-
-  <p class="hint">Prêmio de 10 DCK fictícios a cada rodada global de 60 segundos, dividido pela contribuição acumulada.</p>
-
-
-
-</details>
-
-
-
-  </div>
-
-
-
+  <button type="button" class="pool-details-button" onclick="document.getElementById('poolDetailsDialog').showModal()">Ver detalhes</button>
+  <dialog id="poolDetailsDialog" class="pool-details" aria-labelledby="poolDetailsTitle">
+    <h2 id="poolDetailsTitle">Detalhes da Pool DCK</h2>
+    <dl>
+      <dt>Poder dos outros jogadores</dt><dd id="poolRivalPower"></dd>
+      <dt>Sua participação atual</dt><dd id="poolShare"></dd>
+      <dt>Progresso da rodada</dt><dd><progress id="poolRound" aria-label="Progresso da rodada"></progress> <span id="poolElapsed"></span></dd>
+      <dt>Última recompensa recebida</dt><dd id="poolLast"></dd>
+    </dl>
+    <form method="dialog"><button type="submit" class="secondary">Fechar</button></form>
+  </dialog>
+</div>
 <div class="card room-missions">
 
 
@@ -2049,7 +1998,11 @@ $("missions").innerHTML=defs.map(([name,ok,reward],i)=>`<div class="mission"><b>
 
 
 
-renderRanking();renderDaily();renderPool();$("events").innerHTML=game.history.map(x=>"<p>"+x.replace(/[\p{Extended_Pictographic}\uFE0F]+/gu,"").trim()+"</p>").join("")||"Bem-vindo à sua sala!";
+renderRanking();renderDaily();renderPool();
+const secondsToRound = Math.max(0, 60 - Math.floor($("poolRound").value));
+$("poolCountdown").textContent = String(Math.floor(secondsToRound / 60)).padStart(2,"0")
+  + ":" + String(secondsToRound % 60).padStart(2,"0");
+$("events").innerHTML=game.history.map(x=>"<p>"+x.replace(/[\p{Extended_Pictographic}\uFE0F]+/gu,"").trim()+"</p>").join("")||"Bem-vindo à sua sala!";
 
 
 
