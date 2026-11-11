@@ -205,7 +205,9 @@ def new_machine(index):
 
 
 def slot(s, data, prefix=''):
-    return (integer(data, prefix+'r', high=len(s['racks'])-1), integer(data, prefix+'s', high=3))
+    rack = integer(data, prefix+'r', high=len(s['racks'])-1)
+    position = integer(data, prefix+'s', high=len(s['racks'][rack])-1)
+    return rack, position
 
 
 def act(s, data):
@@ -264,9 +266,13 @@ def act(s, data):
     elif name == 'expand':
         if len(s['racks']) >= 8:
             raise ValueError('Limite de oito racks.')
-        spend(s, 2500 + max(0, len(s['racks']) - 3)*2000)
-        s['racks'].append([None]*4)
-        message = 'Compra confirmada: novo rack'
+        size = data.get('size', SLOTS)
+        if type(size) is not int or size != SLOTS:
+            raise ValueError('Tamanho de rack inválido.')
+        cost = 2500 + max(0, len(s['racks']) - 3)*2000
+        spend(s, cost)
+        s['racks'].append([None]*size)
+        message = f'Compra confirmada: rack de {size} espaços · {cost} DCK'
     elif name == 'cooling':
         spend(s, 1200 + s['cooling']*900)
         s['cooling'] += 1

@@ -568,7 +568,7 @@ button:enabled:hover{filter:brightness(1.14)}
 
 
 
-<div class="row"><button onclick="expandRoom()">Expandir sala / adicionar rack</button><span class="muted" id="rackPrice"></span></div></div>
+<div class="row"><button onclick="showTab('shop');filterMarket('racks')">Ver racks na Loja</button><span class="muted" id="rackPrice"></span></div></div>
 
 
 
@@ -1823,15 +1823,14 @@ function renderMarket(){
     })).filter(product => marketRarity === 'Todas' || product.rarity === marketRarity);
 
   } else if (marketCategory === 'racks') {
-
     const limit = game.racks.length >= 8;
-
-    products = [{name:'Rack de mineração',rarity:'Estrutura',kind:'rack',
-
-      details:`Adiciona ${SLOTS} espaços à sala. Racks instalados: ${game.racks.length}/8.`,
-
-      price:2500+Math.max(0,game.racks.length-3)*2000,action:'expandRoom()',button:limit?'Limite atingido':'Comprar rack',disabled:limit}];
-
+    const basePrice = 2500 + Math.max(0, game.racks.length - 3) * 2000;
+    products = [[4,'Rack Duck Básico']].map(([size,name]) => ({
+      name, rarity:'Estrutura', kind:'rack',
+      details:`Adiciona ${size} espaços à sala. Racks instalados: ${game.racks.length}/8.`,
+      price:basePrice + (size - 4) * 750, action:`expandRoom(${size})`,
+      button:limit ? 'Limite atingido' : 'Comprar rack', disabled:limit
+    }));
   } else if (marketCategory === 'battery') {
 
     products = [{name:'Bateria de mineração',rarity:'Energia',kind:'battery',
@@ -1886,11 +1885,11 @@ $("balance").textContent=lmt(game.balance);$("total").textContent=lmt(game.total
 
 
 
-$("roomInfo").textContent=allMachines().length+" máquinas instaladas • "+game.racks.length+" racks • "+game.racks.length*SLOTS+" espaços totais • temperatura "+temp().toFixed(1)+" °C";
+$("roomInfo").textContent=allMachines().length+" máquinas instaladas • "+game.racks.length+" racks • "+game.racks.reduce((total,rack)=>total+rack.length,0)+" espaços totais • temperatura "+temp().toFixed(1)+" °C";
 
 
 
-$("rackPrice").textContent="Próximo rack: "+lmt(2500+Math.max(0,game.racks.length-3)*2000);
+$("rackPrice").textContent="Racks a partir de "+lmt(2500+Math.max(0,game.racks.length-3)*2000);
 
 
 
