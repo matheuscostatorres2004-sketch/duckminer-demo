@@ -290,6 +290,13 @@ button:enabled:hover{filter:brightness(1.14)}
 .rack-frame-photo .slot.filled>div{position:relative;width:100%;height:100%;min-width:0}
 .rack-frame-photo .slot.filled b{position:absolute;left:0;right:0;bottom:0;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#fff;text-shadow:0 1px 3px #000,0 0 5px #000}
 .rack-frame-photo .slot.filled .machine-photo{height:calc(100% - 9px)}
+
+.rack-frame-photo .slot.filled .machine-photo{height:100%}
+.rack-frame-photo .slot.filled .machine-photo img{object-fit:fill}
+.installed-machine-info .machine-photo{height:100px;margin:8px 0}
+.installed-machine-info dl{display:grid;grid-template-columns:1fr auto;gap:7px 14px;margin:14px 0}
+.installed-machine-info dd{margin:0;text-align:right;color:var(--green)}
+.installed-machine-info button{margin-bottom:8px}
 </style></head>
 
 
@@ -1926,7 +1933,7 @@ $("online").textContent=new Date(game.seconds*1000).toISOString().slice(11,19);
 
 
 const positions = game.rackPositions || game.racks.map((_, index) => index);
-$("racks").innerHTML=Array.from({length:MAX_RACKS},(_,position)=>{const r=positions.indexOf(position);const rack=game.racks[r];return rack ? `<div class="rack"><div class="rack-controls"><h3>RACK ${position+1}</h3><button type="button" class="danger" onclick="removeRack(${position})" aria-label="Remover rack ${position+1}">Remover</button></div><div class="rack-frame ${rack.length === 4 ? "rack-frame-photo" : ""}"><div class="slots">${rack.map((m,s)=>`<div class="slot ${m?"filled":""}" ondragover="allowDrop(event)" ondragleave="this.classList.remove('over')" ondrop="dropMachine(event,${r},${s})" onclick="clickSlot(${r},${s})">${m?`<div draggable="true" ondragstart="dragRack(event,${r},${s})">${machinePhoto(m.name)}<b>${m.name} • ${m.rarity||"Basic"} • Nv.${m.level||0}</b><small>${m.power} TH/s • ${m.watts} W</small><small>Arraste para mover</small></div>`:`<span>＋ ESPAÇO VAZIO<small>Rack ${r+1} • Slot ${s+1}</small></span>`}</div>`).join("")}</div></div></div>` : `<button type="button" class="rack-position-empty" onclick="chooseRackPosition(${position})"><strong>+</strong><span>Lugar ${position+1}</span><small>${game.rackStock ? "Instalar rack" : "Comprar rack"}</small></button>`;}).join("");
+$("racks").innerHTML=Array.from({length:MAX_RACKS},(_,position)=>{const r=positions.indexOf(position);const rack=game.racks[r];return rack ? `<div class="rack"><div class="rack-controls"><h3>RACK ${position+1}</h3><button type="button" class="danger" onclick="removeRack(${position})" aria-label="Remover rack ${position+1}">Remover</button></div><div class="rack-frame ${rack.length === 4 ? "rack-frame-photo" : ""}"><div class="slots">${rack.map((m,s)=>`<div class="slot ${m?"filled":""}" ondragover="allowDrop(event)" ondragleave="this.classList.remove('over')" ondrop="dropMachine(event,${r},${s})" onclick="clickSlot(${r},${s})">${m?`<div draggable="true" title="${m.name}" aria-label="${m.name}" ondragstart="dragRack(event,${r},${s})">${machinePhoto(m.name)}</div>`:`<span>＋ ESPAÇO VAZIO<small>Rack ${r+1} • Slot ${s+1}</small></span>`}</div>`).join("")}</div></div></div>` : `<button type="button" class="rack-position-empty" onclick="chooseRackPosition(${position})"><strong>+</strong><span>Lugar ${position+1}</span><small>${game.rackStock ? "Instalar rack" : "Comprar rack"}</small></button>`;}).join("");
 attachMachinePhotos($("racks"));
 for (const frame of $("racks").querySelectorAll(".rack-frame-photo")) {
   frame.prepend($("rackPhotoTemplate").content.cloneNode(true));
@@ -1978,7 +1985,15 @@ if (selectedSlot) {
 
 
 
-    ? `<p>Rack ${r+1}, espaço ${s+1} — máquina instalada</p><button onclick="removeSelectedMachine()">Tirar máquina e devolver ao estoque</button>`
+    ? `<div class="installed-machine-info">
+      <h3>${installed.name}</h3>
+      ${machinePhoto(installed.name)}
+      <dl><dt>Categoria</dt><dd>${installed.rarity || "Basic"}</dd>
+      <dt>Poder de mineração</dt><dd>${fmt(installed.power)} TH/s</dd>
+      <dt>Nível</dt><dd>${installed.level || 0}</dd>
+      <dt>Local</dt><dd>Rack ${(game.rackPositions?.[r] ?? r)+1}, espaço ${s+1}</dd></dl>
+      <button type="button" class="danger" onclick="removeSelectedMachine()">Retirar e devolver ao estoque</button>
+    </div>`
 
 
 
@@ -1986,7 +2001,10 @@ if (selectedSlot) {
 
 
 
-  if (!picker.open) picker.showModal();
+  if (!picker.open) {
+    attachMachinePhotos($("machineChoices"));
+    picker.showModal();
+  }
 
 
 
