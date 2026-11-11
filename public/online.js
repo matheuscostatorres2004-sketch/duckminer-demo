@@ -96,11 +96,9 @@ save = show => { if (show) $('connectionStatus').textContent = 'O servidor salva
 load = () => {};
 collectOfflineMining = () => {};
 buy = index => serverAction('buy', {index});
-buyBattery = () => serverAction('battery');
-rechargeBattery = () => serverAction('recharge');
-clearBattery = () => { if (confirm('Zerar a carga atual?')) serverAction('clear_battery'); };
 clearBalance = () => { if (confirm('Zerar o saldo em DCK?')) serverAction('clear_balance'); };
-expandRoom = () => serverAction('expand');
+expandRoom = (size = 4) => serverAction('expand', {size});
+function installRack(position) { return serverAction('install_rack', {position}); }
 buyCooling = () => serverAction('cooling');
 upgrade = id => serverAction('upgrade', {id});
 placeInventory = (id, r, s) => serverAction('install', {id, r, s});
@@ -221,13 +219,13 @@ async function loadAdmin(offset = adminOffset) {
       const info = document.createElement('p');
       info.textContent = 'Saldo: ' + lmt(player.balance) + ' · Total minerado: ' + lmt(player.totalMined)
         + ' · Máquinas instaladas: ' + player.installed + ' · No estoque: ' + player.inventory;
-      const battery = document.createElement('p');
-      battery.textContent = 'Poder: ' + fmt(player.power) + ' TH/s · Carga: '
-        + fmt(player.batterySeconds / 3600) + ' h · Baterias em estoque: ' + player.batteries;
+      const rackInfo = document.createElement('p');
+      rackInfo.textContent = 'Poder: ' + fmt(player.power) + ' TH/s · Racks instalados: '
+        + player.racks + ' · Racks no estoque: ' + player.rackStock;
       const activity = document.createElement('p');
       activity.textContent = 'Sessões válidas: ' + player.activeSessions
         + ' · Última atividade: ' + (player.lastSeen ? new Date(player.lastSeen * 1000).toLocaleString('pt-BR') : 'Sem registro');
-      row.append(title, info, battery, activity);
+      row.append(title, info, rackInfo, activity);
       if (!player.admin) {
         for (const [action, label] of [[player.blocked ? 'unblock' : 'block', player.blocked ? 'Desbloquear' : 'Bloquear'], ['revoke', 'Encerrar sessões']]) {
           const button = document.createElement('button');

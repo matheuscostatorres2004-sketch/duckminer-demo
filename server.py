@@ -28,8 +28,8 @@ DAY = 86400
 SLOTS = 4
 MODELS = json.loads((ROOT / 'catalog.json').read_text(encoding='utf-8')) if (ROOT / 'catalog.json').exists() else []
 MISSION = {
-    'daily': [('machine', 1, 75), ('battery', 1, 50)],
-    'weekly': [('machine', 3, 250), ('battery', 3, 200), ('crate', 2, 250)],
+    'daily': [('machine', 1, 75), ('install', 1, 50)],
+    'weekly': [('machine', 3, 250), ('install', 3, 200), ('crate', 2, 250)],
 }
 TZ = timezone(timedelta(hours=-3))
 SESSION_SECONDS = DAY
@@ -102,7 +102,7 @@ def initialize():
 
 def fresh():
     return dict(coins=1000 * UNIT, mined=0, racks=[[None]*4 for _ in range(3)],
-                inventory=[], batterySeconds=DAY, batteryReserve=0, batteriesUsed=1,
+                inventory=[], rackStock=0, rackPositions=[0, 1, 2],
                 seconds=0, cooling=0, claimed=[], history=[], dailyLast='', dailyStreak=0,
                 crateCount=0, timedMissions={}, work=0, lastReward=0)
 
@@ -121,7 +121,7 @@ def power(state):
 
 
 def advance(db, now):
-    """Settle global rounds and battery usage in the caller's write transaction."""
+    """Settle global rounds in the caller's write transaction."""
     pool = db.execute('SELECT * FROM pool WHERE id=1').fetchone()
     last, start = pool['last'], pool['start']
     if now <= last:
@@ -129,23 +129,17 @@ def advance(db, now):
     states = {r['id']: json.loads(r['state']) for r in db.execute('SELECT id,state FROM users WHERE blocked=0')}
     while last < now:
         # Empty pools can skip whole intervals after downtime.
-        if not any(s['batterySeconds'] > 0 and power(s) for s in states.values()) and not any(s['work'] for s in states.values()):
+        if not any(power(s) for s in states.values()) and not any(s['work'] for s in states.values()):
             start += max(0, (now - start) // 60) * 60
             last = now
             break
-        expirations = [last + s['batterySeconds'] for s in states.values()
-                       if s['batterySeconds'] > 0 and power(s)]
-        end = min([now, start + 60] + expirations)
+        end = min(now, start + 60)
         duration = end - last
         for s in states.values():
-            if power(s) > 0:
-                active = min(duration, s['batterySeconds'])
-                s['work'] += power(s) * active
-                s['seconds'] += active
-                s['batterySeconds'] -= active
-                # A depleted battery cancels unfinished personal contribution.
-                if s['batterySeconds'] == 0 and end < start + 60:
-                    s['work'] = 0
+            installed_power = power(s)
+            if installed_power:
+                s['work'] += installed_power * duration
+                s['seconds'] += duration
         last = end
         if end == start + 60:
             total = sum(s['work'] for s in states.values())
@@ -235,6 +229,12 @@ def act(s, data):
             raise ValueError('Máquina indisponível ou espaço ocupado.')
         s['inventory'].remove(machine)
         s['racks'][r][pos] = machine
+        for period in MISSION:
+            p = progress(s, period)
+            installed = p.setdefault('installedMachines', [])
+            if machine['id'] not in installed:
+                installed.append(machine['id'])
+                p['counts']['install'] = len(installed)
     elif name == 'remove':
         r, pos = slot(s, data)
         if not s['racks'][r][pos]:
@@ -247,32 +247,29 @@ def act(s, data):
         if not s['racks'][r][pos]:
             raise ValueError('Máquina indisponível.')
         s['racks'][r][pos], s['racks'][r2][pos2] = s['racks'][r2][pos2], s['racks'][r][pos]
-    elif name == 'battery':
-        spend(s, 150)
-        s['batteryReserve'] += 1
-        s['batteriesUsed'] += 1
-        message = 'Compra confirmada: bateria · 150 DCK'
-    elif name == 'recharge':
-        if s['batteryReserve'] < 1 or s['batterySeconds'] + DAY > 7 * DAY:
-            raise ValueError('Sem bateria no estoque ou carga acima do limite de sete dias.')
-        s['batteryReserve'] -= 1
-        s['batterySeconds'] += DAY
-        count(s, 'battery')
-    elif name == 'clear_battery':
-        s['batterySeconds'] = 0
-        s['work'] = 0
     elif name == 'clear_balance':
         s['coins'] = 0
     elif name == 'expand':
-        if len(s['racks']) >= 12:
-            raise ValueError('Limite de 12 racks.')
+        stock = s.get('rackStock', 0)
+        owned = len(s['racks']) + stock
+        if owned >= 12:
+            raise ValueError('Limite de 12 racks, incluindo o estoque.')
         size = data.get('size', SLOTS)
         if type(size) is not int or size != SLOTS:
             raise ValueError('Tamanho de rack inválido.')
-        cost = 2500 + max(0, len(s['racks']) - 3)*2000
+        cost = 2500 + max(0, owned - 3) * 2000
         spend(s, cost)
-        s['racks'].append([None]*size)
-        message = f'Compra confirmada: rack de {size} espaços · {cost} DCK'
+        s['rackStock'] = stock + 1
+        message = f'Rack enviado ao estoque · {cost} DCK'
+    elif name == 'install_rack':
+        position = integer(data, 'position', high=11)
+        positions = s.setdefault('rackPositions', list(range(len(s['racks']))))
+        if position in positions or len(s['racks']) >= 12 or s.get('rackStock', 0) < 1:
+            raise ValueError('Lugar ocupado ou sem rack no estoque.')
+        s['racks'].append([None] * SLOTS)
+        positions.append(position)
+        s['rackStock'] -= 1
+        message = f'Rack instalado no lugar {position + 1}.'
     elif name == 'cooling':
         spend(s, 1200 + s['cooling']*900)
         s['cooling'] += 1
@@ -336,7 +333,7 @@ def snapshot(db, uid):
     s = next(json.loads(u['state']) for u in users if u['id'] == uid)
     for period in MISSION:
         progress(s, period)
-    active = lambda state: power(state) if state['batterySeconds'] > 0 else 0
+    active = power
     network = sum(active(json.loads(u['state'])) for u in users)
     elapsed = db.execute('SELECT last-start FROM pool WHERE id=1').fetchone()[0]
     return {'game': {**s, 'balance': s['coins']/UNIT, 'total': s['mined']/UNIT,
@@ -463,8 +460,8 @@ def admin_snapshot(db, now, offset):
                             blocked=bool(user['blocked']), createdAt=user['created_at'],
                             balance=state['coins']/UNIT, totalMined=state['mined']/UNIT,
                             installed=len(machines(state)), inventory=len(state['inventory']),
-                            power=power(state), batterySeconds=state['batterySeconds'],
-                            batteries=state['batteryReserve'], activeSessions=session['count'],
+                            power=power(state), racks=len(state['racks']),
+                            rackStock=state.get('rackStock', 0), activeSessions=session['count'],
                             lastSeen=session['seen'] or 0, admin=user['name'] == os.environ.get('DUCKMINER_ADMIN_USERNAME','').strip().lower()))
     return dict(total=total, recent=recent, players=players, offset=offset, limit=50)
 

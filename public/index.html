@@ -18,7 +18,7 @@
 
 
 
-<title>DuckMiner DCK | Bateria na Sala</title>
+<title>DuckMiner DCK | Sala de mineração</title>
 
 
 
@@ -447,27 +447,7 @@ button:enabled:hover{filter:brightness(1.14)}
 
 
 
-<div class="room-panels"><div class="card"><h2>Bateria</h2>
-
-
-
-
-
-
-
-<div class="stats"><div class="stat"><small>Carga restante</small><b id="batteryTime">1d 00h 00m</b></div><div class="stat"><small>Baterias no estoque</small><b id="batteryCount">0</b></div></div>
-
-
-
-<div id="batteryBar" role="img" aria-label="Carga em uma escala de sete dias"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
-
-
-
-<p id="batteryStatus"></p><button id="rechargeBattery" onclick="rechargeBattery()">Recarregar bateria</button><button id="clearBattery" class="danger" onclick="clearBattery()">Zerar carga</button><p class="hint" id="batteryReserve"></p>
-
-
-
-</div><div class="card pool-panel">
+<div class="room-panels"><div class="card pool-panel">
 
 
 
@@ -631,7 +611,6 @@ button:enabled:hover{filter:brightness(1.14)}
 
       <button type="button" data-category="racks" onclick="filterMarket('racks')">Racks</button>
 
-      <button type="button" data-category="battery" onclick="filterMarket('battery')">Baterias</button>
 
       <button type="button" data-category="crates" onclick="filterMarket('crates')">Caixas</button>
 
@@ -659,7 +638,7 @@ button:enabled:hover{filter:brightness(1.14)}
 
 </section>
 
-<section hidden id="tab-inventory"><div class="card"><h2>Estoque</h2><div id="inventory"></div></div></section>
+<section hidden id="tab-inventory"><div class="card"><h2>Estoque</h2><h3>Racks</h3><p id="rackStock"></p><button type="button" onclick="showTab('room')">Ir à Sala para instalar</button><h3>Máquinas</h3><div id="inventory"></div></div></section>
 
 
 
@@ -1168,7 +1147,7 @@ function cancelInstallation(){
 
 
 
-function expandRoom(){let cost=2500+Math.max(0,game.racks.length-3)*2000;if(game.racks.length>=MAX_RACKS)return alert("Limite de 12 racks atingido.");if(game.balance<cost)return alert("Saldo insuficiente para expandir.");game.balance-=cost;game.racks.push(emptyRack());addEvent("Novo rack construído por "+lmt(cost));render();save();showPurchase("Novo rack", cost)}
+function expandRoom(){let cost=2500+Math.max(0,game.racks.length+(game.rackStock||0)-3)*2000;if(game.racks.length>=MAX_RACKS)return alert("Limite de 12 racks atingido.");if(game.balance<cost)return alert("Saldo insuficiente para expandir.");game.balance-=cost;game.racks.push(emptyRack());addEvent("Novo rack construído por "+lmt(cost));render();save();showPurchase("Novo rack", cost)}
 
 
 
@@ -1564,11 +1543,11 @@ const timedMissions = {
 
 
 
-  daily: [["machine","Compre uma máquina",1,75],["battery","Recarregue a bateria",1,50]],
+  daily: [["machine","Compre uma máquina",1,75],["install","Instale uma máquina",1,50]],
 
 
 
-  weekly: [["machine","Compre três máquinas",3,250],["battery","Recarregue a bateria três vezes",3,200],["crate","Abra duas caixas",2,250]]
+  weekly: [["machine","Compre três máquinas",3,250],["install","Instale três máquinas diferentes",3,200],["crate","Abra duas caixas",2,250]]
 
 
 
@@ -1826,7 +1805,7 @@ function renderMarket(){
 
   $('marketBalance').textContent = lmt(game.balance);
 
-  const titles = {miners:'Máquinas de mineração',racks:'Racks',battery:'Baterias',crates:'Caixas de equipamentos'};
+  const titles = {miners:'Máquinas de mineração',racks:'Racks',crates:'Caixas de equipamentos'};
 
   $('marketCategoryTitle').textContent = titles[marketCategory];
 
@@ -1855,22 +1834,15 @@ function renderMarket(){
     })).filter(product => marketRarity === 'Todas' || product.rarity === marketRarity);
 
   } else if (marketCategory === 'racks') {
-    const limit = game.racks.length >= MAX_RACKS;
-    const basePrice = 2500 + Math.max(0, game.racks.length - 3) * 2000;
+    const owned = game.racks.length + (game.rackStock || 0);
+    const limit = owned >= MAX_RACKS;
+    const basePrice = 2500 + Math.max(0, owned - 3) * 2000;
     products = [[4,'Rack Duck Básico']].map(([size,name]) => ({
       name, rarity:'Estrutura', kind:'rack',
-      details:`Adiciona ${size} espaços à sala. Racks instalados: ${game.racks.length}/${MAX_RACKS}.`,
+      details:`Adiciona ${size} espaços à sala. Racks adquiridos: ${owned}/${MAX_RACKS}. Vai para o estoque.`,
       price:basePrice + (size - 4) * 750, action:`expandRoom(${size})`,
       button:limit ? 'Limite atingido' : 'Comprar rack', disabled:limit
     }));
-  } else if (marketCategory === 'battery') {
-
-    products = [{name:'Bateria de mineração',rarity:'Energia',kind:'battery',
-
-      details:'Adiciona 24 horas quando usada para recarregar. A bateria comprada fica na reserva.',
-
-      price:150,action:'buyBattery()',button:'Comprar bateria'}];
-
   } else {
 
     products = [
@@ -1900,7 +1872,16 @@ function renderMarket(){
 
 
 
+function chooseRackPosition(position) {
+  if (game.rackStock) {
+    installRack(position);
+  } else {
+    showTab('shop');
+    filterMarket('racks');
+  }
+}
 function render(){
+  $("rackStock").textContent = (game.rackStock || 0) + " rack(s) Duck Básico disponíveis";
 
 
 
@@ -1924,7 +1905,7 @@ $("roomInfo").textContent=allMachines().length+" máquinas instaladas • "+game
 
 
 
-$("rackPrice").textContent="Racks a partir de "+lmt(2500+Math.max(0,game.racks.length-3)*2000);
+$("rackPrice").textContent="Racks a partir de "+lmt(2500+Math.max(0,game.racks.length+(game.rackStock||0)-3)*2000);
 
 
 
@@ -1932,7 +1913,8 @@ $("online").textContent=new Date(game.seconds*1000).toISOString().slice(11,19);
 
 
 
-$("racks").innerHTML=Array.from({length:MAX_RACKS},(_,r)=>game.racks[r] || null).map((rack,r)=>rack ? `<div class="rack"><h3>RACK ${r+1}</h3><div class="rack-frame ${rack.length === 4 ? "rack-frame-photo" : ""}"><div class="slots">${rack.map((m,s)=>`<div class="slot ${m?"filled":""}" ondragover="allowDrop(event)" ondragleave="this.classList.remove('over')" ondrop="dropMachine(event,${r},${s})" onclick="clickSlot(${r},${s})">${m?`<div draggable="true" ondragstart="dragRack(event,${r},${s})"><b>${m.name} • ${m.rarity||"Comum"} • Nv.${m.level||0}</b><small>${m.power} TH/s • ${m.watts} W</small><small>Arraste para mover</small></div>`:`<span>＋ ESPAÇO VAZIO<small>Rack ${r+1} • Slot ${s+1}</small></span>`}</div>`).join("")}</div></div></div>` : `<button type="button" class="rack-position-empty" onclick="showTab('shop');filterMarket('racks')"><strong>+</strong><span>Lugar ${r+1}</span><small>Comprar rack</small></button>`).join("");
+const positions = game.rackPositions || game.racks.map((_, index) => index);
+$("racks").innerHTML=Array.from({length:MAX_RACKS},(_,position)=>{const r=positions.indexOf(position);const rack=game.racks[r];return rack ? `<div class="rack"><h3>RACK ${position+1}</h3><div class="rack-frame ${rack.length === 4 ? "rack-frame-photo" : ""}"><div class="slots">${rack.map((m,s)=>`<div class="slot ${m?"filled":""}" ondragover="allowDrop(event)" ondragleave="this.classList.remove('over')" ondrop="dropMachine(event,${r},${s})" onclick="clickSlot(${r},${s})">${m?`<div draggable="true" ondragstart="dragRack(event,${r},${s})"><b>${m.name} • ${m.rarity||"Comum"} • Nv.${m.level||0}</b><small>${m.power} TH/s • ${m.watts} W</small><small>Arraste para mover</small></div>`:`<span>＋ ESPAÇO VAZIO<small>Rack ${r+1} • Slot ${s+1}</small></span>`}</div>`).join("")}</div></div></div>` : `<button type="button" class="rack-position-empty" onclick="chooseRackPosition(${position})"><strong>+</strong><span>Lugar ${position+1}</span><small>${game.rackStock ? "Instalar rack" : "Comprar rack"}</small></button>`;}).join("");
 for (const frame of $("racks").querySelectorAll(".rack-frame-photo")) {
   frame.prepend($("rackPhotoTemplate").content.cloneNode(true));
 }
@@ -2031,7 +2013,7 @@ $("missions").innerHTML=defs.map(([name,ok,reward],i)=>`<div class="mission"><b>
 
 
 
-renderRanking();renderDaily();renderBattery();renderPool();$("events").innerHTML=game.history.map(x=>"<p>"+x.replace(/[\p{Extended_Pictographic}\uFE0F]+/gu,"").trim()+"</p>").join("")||"Bem-vindo à sua sala!";
+renderRanking();renderDaily();renderPool();$("events").innerHTML=game.history.map(x=>"<p>"+x.replace(/[\p{Extended_Pictographic}\uFE0F]+/gu,"").trim()+"</p>").join("")||"Bem-vindo à sua sala!";
 
 
 
