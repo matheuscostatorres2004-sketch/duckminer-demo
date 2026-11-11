@@ -37,6 +37,10 @@ function showLogin() {
 function receive(result) {
   const metrics = game.metrics || [];
   game = result.game;
+  for (const machine of [...game.inventory, ...game.racks.flat().filter(Boolean)]) {
+    machine.name = machine.name.replace(/^Antminer\b/, 'Duck');
+  }
+  game.history = game.history.map(entry => entry.replace(/\bAntminer\b/g, 'Duck'));
   game.metrics = metrics;
   poolState = result.pool;
   rankingState = result.ranking;
@@ -71,6 +75,7 @@ async function serverAction(action, fields = {}) {
     if (action === 'settings') settingsDirty = false;
     if (action === 'install' || action === 'remove') selectedSlot = selectedId = null;
     receive(result);
+    if (result.message) result.message = result.message.replace(/\bAntminer\b/g, 'Duck');
     $('connectionStatus').textContent = result.message || 'Dados atualizados.';
     if (result.message) {
       $('purchaseNotice').textContent = result.message;

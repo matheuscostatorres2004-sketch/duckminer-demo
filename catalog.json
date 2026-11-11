@@ -1,1 +1,54 @@
-[{"name": "Duck Básica", "power": 100, "cost": 125, "watts": 100, "icon": "🖥️"}, {"name": "Duck Avançada", "power": 500, "cost": 450, "watts": 250, "icon": "💻"}, {"name": "Duck Profissional", "power": 1000, "cost": 1250, "watts": 450, "icon": "⚙️"}, {"name": "Duck Ultra", "power": 2500, "cost": 2750, "watts": 800, "icon": "🚀"}, {"name": "Duck Prisma", "power": 4200, "cost": 5500, "watts": 900, "icon": "💎", "rarity": "Rara"}, {"name": "duck Titã", "power": 8500, "cost": 13000, "watts": 1450, "icon": "🛡️", "rarity": "Épica"}, {"name": "Duck Fênix", "power": 16000, "cost": 3000, "watts": 2100, "icon": "🔥", "rarity": "Lendária"}]
+[
+  {
+    "name": "Duck Básica",
+    "power": 100,
+    "cost": 125,
+    "watts": 100,
+    "icon": "🖥️"
+  },
+  {
+    "name": "Duck Avançada",
+    "power": 500,
+    "cost": 450,
+    "watts": 250,
+    "icon": "💻"
+  },
+  {
+    "name": "Duck Profissional",
+    "power": 1000,
+    "cost": 1250,
+    "watts": 450,
+    "icon": "⚙️"
+  },
+  {
+    "name": "Duck Ultra",
+    "power": 2500,
+    "cost": 2750,
+    "watts": 800,
+    "icon": "🚀"
+  },
+  {
+    "name": "Duck Prisma",
+    "power": 4200,
+    "cost": 5500,
+    "watts": 900,
+    "icon": "💎",
+    "rarity": "Rara"
+  },
+  {
+    "name": "Duck Titã",
+    "power": 8500,
+    "cost": 13000,
+    "watts": 1450,
+    "icon": "🛡️",
+    "rarity": "Épica"
+  },
+  {
+    "name": "Duck Fênix",
+    "power": 16000,
+    "cost": 31000,
+    "watts": 2100,
+    "icon": "🔥",
+    "rarity": "Lendária"
+  }
+]
