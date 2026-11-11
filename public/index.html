@@ -256,6 +256,14 @@ button:enabled:hover{filter:brightness(1.14)}
 .rack-photo,.market-product[data-kind="rack"] .market-visual{background:#818181 var(--rack-photo) center/contain no-repeat}
 .rack-photo{aspect-ratio:2/1;border-radius:6px;margin:0 0 9px}
 .market-product[data-kind="rack"] .market-device{display:none}
+
+.rack-frame-photo{position:relative;aspect-ratio:1;background:#818181 var(--rack-photo) center/contain no-repeat;border-radius:6px}
+.rack-frame-photo .slots{position:absolute;inset:1% 17% 24%;display:grid;grid-template-rows:repeat(4,minmax(0,1fr));gap:0}
+.rack-frame-photo .slot{align-self:center;min-height:0;width:100%;max-height:92%;padding:3px;border:1px solid #42ffac80;background:#070b13d9;color:#f4f7ff;font-size:clamp(8px,1vw,12px);overflow:hidden}
+.rack-frame-photo .slot.filled{background:#051c17ed;border-color:#42ffac}
+.rack-frame-photo .slot.over{background:#194c38}
+.rack-frame-photo .slot small{display:none}
+.rack-frame-photo .slot b{font-size:inherit}
 </style></head>
 
 
@@ -1901,7 +1909,7 @@ $("online").textContent=new Date(game.seconds*1000).toISOString().slice(11,19);
 
 
 
-$("racks").innerHTML=game.racks.map((rack,r)=>`<div class="rack"><h3>RACK ${r+1}</h3><div class="rack-photo" role="img" aria-label="Foto frontal do rack Duck"></div><div class="slots">${rack.map((m,s)=>`<div class="slot ${m?"filled":""}" ondragover="allowDrop(event)" ondragleave="this.classList.remove('over')" ondrop="dropMachine(event,${r},${s})" onclick="clickSlot(${r},${s})">${m?`<div draggable="true" ondragstart="dragRack(event,${r},${s})"><b>${m.name} • ${m.rarity||"Comum"} • Nv.${m.level||0}</b><small>${m.power} TH/s • ${m.watts} W</small><small>Arraste para mover</small></div>`:`<span>＋ ESPAÇO VAZIO<small>Rack ${r+1} • Slot ${s+1}</small></span>`}</div>`).join("")}</div></div>`).join("");
+$("racks").innerHTML=game.racks.map((rack,r)=>`<div class="rack"><h3>RACK ${r+1}</h3><div class="rack-frame ${rack.length === 4 ? "rack-frame-photo" : ""}"><div class="slots">${rack.map((m,s)=>`<div class="slot ${m?"filled":""}" ondragover="allowDrop(event)" ondragleave="this.classList.remove('over')" ondrop="dropMachine(event,${r},${s})" onclick="clickSlot(${r},${s})">${m?`<div draggable="true" ondragstart="dragRack(event,${r},${s})"><b>${m.name} • ${m.rarity||"Comum"} • Nv.${m.level||0}</b><small>${m.power} TH/s • ${m.watts} W</small><small>Arraste para mover</small></div>`:`<span>＋ ESPAÇO VAZIO<small>Rack ${r+1} • Slot ${s+1}</small></span>`}</div>`).join("")}</div></div></div>`).join("");
 
 
 
