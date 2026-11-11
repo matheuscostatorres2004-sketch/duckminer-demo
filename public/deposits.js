@@ -35,6 +35,7 @@ async function submitDeposit(data) {
 }
 
 function renderDeposits(config, deposits) {
+  if (!$("depositForm")) return;
   const signature = JSON.stringify([config, deposits]);
   if (signature === depositSignature) return;
   depositSignature = signature;
@@ -68,7 +69,7 @@ function renderDeposits(config, deposits) {
   });
   $('depositList').replaceChildren(...rows);
 }
-$('depositForm').addEventListener('submit', event => {
+$('depositForm')?.addEventListener('submit', event => {
   event.preventDefault();
   submitDeposit({action:'create', amount:$('depositAmount').value});
 });

@@ -360,17 +360,8 @@ button:enabled:hover{filter:brightness(1.14)}
 <input id="dogeAddress" type="text" value="DU4SUehkNrAYkGHda3C1pU3V43LEQHKNEa" readonly spellcheck="false">
 <div class="row"><button type="button" onclick="copyBitcoinAddress('dogeAddress','dogeCopyStatus')">Copiar endereço</button><a class="btc-wallet-link" href="dogecoin:DU4SUehkNrAYkGHda3C1pU3V43LEQHKNEa">Abrir na carteira</a></div>
 <p id="dogeCopyStatus" role="status"></p>
-<p class="hint">Para receber DCK, abra uma solicitação de depósito e use o endereço exclusivo dela.</p>
-</div></div></div><h3>🐕 Depósito DOGE</h3>
-<p id="depositAvailability"></p>
-<form id="depositForm">
-<label for="depositAmount">Quantidade de DOGE</label>
-<input id="depositAmount" type="number" min="0.00000001" max="1000000" step="0.00000001" required>
-<button id="depositCreate" type="submit">Solicitar depósito</button>
-</form>
-<p id="depositMessage" role="status"></p>
-<p>O administrador fornece um endereço exclusivo na rede Dogecoin. Após enviar, informe o TXID e aguarde a conferência manual para receber DCK. DCK é um crédito do jogo.</p>
-<div id="depositList"></div></div></section>
+
+</div></div></div></div></section>
 
 <section hidden id="tab-history"><div class="card"><h2>📜 Histórico</h2><div id="events">Bem-vindo!</div></div><div class="card"></div></section><section hidden id="tab-progress"><div class="card"><h2>💾 Progresso</h2><div class="row"><button class="secondary" onclick="save(true)">Salvar jogo</button></div><p class="hint">Seu progresso fica salvo na sua conta neste servidor. DCK é uma moeda fictícia.</p></div><div class="card"></div></section><section hidden id="tab-settings"><div class="card">
 <h2>⚙️ Configurações do jogador</h2>
