@@ -108,7 +108,7 @@ def initialize():
 
 
 def fresh():
-    return dict(coins=1000 * UNIT, mined=0, racks=[[None]*4 for _ in range(3)],
+    return dict(coins=0, mined=0, racks=[[None]*4 for _ in range(3)],
                 inventory=[], rackStock=0, rackPositions=[0, 1, 2],
                 seconds=0, cooling=0, claimed=[], history=[], dailyLast='', dailyStreak=0,
                 crateCount=0, timedMissions={}, work=0, lastReward=0)
