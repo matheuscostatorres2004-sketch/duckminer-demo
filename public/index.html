@@ -366,7 +366,41 @@ button:enabled:hover{filter:brightness(1.14)}
 #tab-wallet .wallet-qr-details svg{display:block;margin-top:8px}
 .wallet-mining-total,.wallet-receive-network{padding:10px 12px;background:#101a17;border:1px solid #294839;border-radius:6px;margin:10px 0}
 .wallet-receive-network strong{display:block}
-</style><style>body:has(#sessionLoading:not([hidden])) #accountGate{display:none}</style></head>
+</style><style>body:has(#sessionLoading:not([hidden])) #accountGate{display:none}</style><style>
+@media (max-width: 740px) {
+  body { zoom:1 !important; }
+  main { width:100%; max-width:100%; padding:12px; }
+  header { padding:10px 12px; }
+  .brand-row { display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+  #gameMenu { order:1; width:100%; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
+  #extraMenu { margin-left:auto; }
+  #extraMenu .extra-menu-items { max-width:calc(100vw - 24px); max-height:65dvh; overflow:auto; }
+  #gameMenu button,#extraMenu summary,#extraMenu button,main button,dialog button { min-height:44px; }
+  input,select,textarea { font-size:16px; max-width:100%; }
+  .mining-room-layout,.mining-room-layout .room-panels { grid-template-columns:minmax(0,1fr); }
+  .mining-room-floor .racks { grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+  .rack,.rack-frame,.market-products,.wallet-workspace { min-width:0; }
+  .rack-controls { flex-wrap:wrap; }
+  .rack-controls button { min-height:36px; }
+  .slot { touch-action:manipulation; }
+  #tab-wallet .wallet-assets { grid-template-columns:minmax(0,1fr); }
+  #tab-wallet .wallet-asset { grid-template-columns:34px minmax(0,1fr) auto; align-items:center; }
+  #tab-wallet .wallet-balance { text-align:right; }
+  #tab-wallet .wallet-actions { flex-wrap:wrap; }
+  .market-layout { grid-template-columns:minmax(0,1fr); }
+  .market-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+  .market-product { min-width:0; overflow-wrap:anywhere; }
+  .market-buy { display:flex; flex-wrap:wrap; }
+  dialog,#poolDetailsDialog { box-sizing:border-box; max-width:calc(100vw - 24px); max-height:85dvh; overflow:auto; }
+  .pool-table-scroll { max-width:100%; overflow-x:auto; }
+}
+@media (max-width:420px) {
+  .market-grid { grid-template-columns:minmax(0,1fr); }
+}
+@media (max-width:360px) {
+  .mining-room-floor .racks { grid-template-columns:minmax(0,1fr); }
+}
+</style></head>
 
 
 
