@@ -229,6 +229,32 @@ async function loadAdmin(offset = adminOffset) {
       activity.textContent = 'Sessões válidas: ' + player.activeSessions
         + ' · Última atividade: ' + (player.lastSeen ? new Date(player.lastSeen * 1000).toLocaleString('pt-BR') : 'Sem registro');
       row.append(title, info, rackInfo, activity);
+      const viewAccount = document.createElement('button');
+      viewAccount.type = 'button';
+      viewAccount.textContent = 'Ver conta';
+      viewAccount.onclick = () => {
+        $('adminPlayerTitle').textContent = player.displayName + ' (@' + player.name + ')';
+        const balances = player.miningWallet || {};
+        const formatBalance = value => (value ?? 0).toLocaleString('pt-BR', {maximumFractionDigits: 6});
+        const fields = [
+          ['ID da conta', player.id],
+          ['Situação', player.blocked ? 'Bloqueada' : 'Liberada'],
+          ['Saldo DCK', formatBalance(player.balance) + ' DCK'],
+          ['Mineração simulada BTC', formatBalance(balances.BTC) + ' BTC'],
+          ['Mineração simulada DOGE', formatBalance(balances.DOGE) + ' DOGE'],
+          ['Máquinas instaladas', player.installed],
+          ['Máquinas no estoque', player.inventory]
+        ];
+        $('adminPlayerDetails').replaceChildren(...fields.flatMap(([label, value]) => {
+          const term = document.createElement('dt');
+          const detail = document.createElement('dd');
+          term.textContent = label;
+          detail.textContent = value;
+          return [term, detail];
+        }));
+        $('adminPlayerDialog').showModal();
+      };
+      row.append(viewAccount);
       if (!player.admin) {
         for (const [action, label] of [[player.blocked ? 'unblock' : 'block', player.blocked ? 'Desbloquear' : 'Bloquear'], ['revoke', 'Encerrar sessões']]) {
           const button = document.createElement('button');

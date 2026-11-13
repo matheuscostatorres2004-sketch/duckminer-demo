@@ -498,6 +498,8 @@ def admin_snapshot(db, now, offset):
         players.append(dict(id=user['id'], name=user['name'], displayName=state.get('settings',{}).get('displayName',user['name']),
                             blocked=bool(user['blocked']), createdAt=user['created_at'],
                             balance=state['coins']/UNIT, totalMined=state['mined']/UNIT,
+                            miningWallet={currency: state.get('miningWallet', {}).get(currency, 0) / UNIT
+                                          for currency in ('BTC', 'DOGE')},
                             installed=len(machines(state)), inventory=len(state['inventory']),
                             power=power(state), racks=len(state['racks']),
                             rackStock=state.get('rackStock', 0), activeSessions=session['count'],
