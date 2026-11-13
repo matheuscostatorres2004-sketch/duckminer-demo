@@ -46,7 +46,7 @@ function receive(result) {
   poolState = result.pool;
   poolSplit = game.poolSplit || {DCK:100, BTC:0, DOGE:0};
   for (const currency of ["BTC", "DOGE"]) {
-    $("mined" + currency).textContent = ((game.miningWallet?.[currency] || 0) / 1000000)
+    $("walletMined" + currency).textContent = $("mined" + currency).textContent = ((game.miningWallet?.[currency] || 0) / 1000000)
       .toLocaleString("pt-BR", {maximumFractionDigits:6});
   }
   rankingState = result.ranking;
