@@ -516,16 +516,14 @@ button:enabled:hover{filter:brightness(1.14)}
     <div><dt>Meu poder ativo</dt><dd id="poolYourPower">0 TH/s</dd></div>
     <div><dt>Poder da rede</dt><dd id="poolNetworkPower">0 TH/s</dd></div>
     <div><dt>Prêmio por rodada</dt><dd id="poolReward">0 DCK</dd></div>
+    <div><dt>Minha recompensa estimada a cada 10 min</dt><dd id="poolEstimate">0 DCK</dd></div>
     <div class="pool-countdown"><dt>Próxima rodada</dt><dd id="poolCountdown">01:00</dd></div>
   </dl>
   <button type="button" class="pool-details-button" onclick="document.getElementById('poolDetailsDialog').showModal()">Ver detalhes</button>
   <dialog id="poolDetailsDialog" class="pool-details" aria-labelledby="poolDetailsTitle">
     <h2 id="poolDetailsTitle">Detalhes da Pool DCK</h2>
     <dl>
-      <dt>Poder dos outros jogadores</dt><dd id="poolRivalPower"></dd>
-      <dt>Sua participação atual</dt><dd id="poolShare"></dd>
       <dt>Progresso da rodada</dt><dd><progress id="poolRound" aria-label="Progresso da rodada"></progress> <span id="poolElapsed"></span></dd>
-      <dt>Última recompensa recebida</dt><dd id="poolLast"></dd>
     </dl>
     <form method="dialog"><button type="submit" class="secondary">Fechar</button></form>
   </dialog>
@@ -1357,6 +1355,11 @@ function miningGain(seconds){
 
 
 
+function renderPoolEstimate(playerPower, networkPower, reward) {
+  const estimate = networkPower > 0 ? reward * playerPower / networkPower : 0;
+  $("poolEstimate").textContent = estimate.toLocaleString("pt-BR", {maximumFractionDigits: 6}) + " DCK";
+}
+
 function renderPool(){
 
 
@@ -1378,6 +1381,7 @@ function renderPool(){
 
 
   $("poolReward").textContent = lmt(POOL_REWARD);
+  renderPoolEstimate(playerPower, networkPower, POOL_REWARD);
 
 
 
@@ -1393,11 +1397,9 @@ function renderPool(){
 
 
 
-  $("poolRivalPower").textContent = fmt(RIVAL_POWER) + " TH/s";
 
 
 
-  $("poolShare").textContent = fmt(share) + "%";
 
 
 
@@ -1413,7 +1415,6 @@ function renderPool(){
 
 
 
-  $("poolLast").textContent = lmt(game.poolLastReward || 0);
 
 
 

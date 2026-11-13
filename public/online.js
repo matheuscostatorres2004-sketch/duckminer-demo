@@ -118,13 +118,11 @@ renderPool = () => {
   const own = game.running ? power() : 0;
   $('poolNetworkPower').textContent = fmt(poolState.power) + ' TH/s';
   $('poolReward').textContent = lmt(poolState.reward);
+  renderPoolEstimate(own, poolState.power, poolState.reward);
   $('poolYourPower').textContent = fmt(own) + ' TH/s';
-  $('poolRivalPower').textContent = fmt(poolState.power - own) + ' TH/s';
-  $('poolShare').textContent = fmt(poolState.power ? 100 * own / poolState.power : 0) + '%';
   $('poolRound').max = poolState.duration ?? POOL_SECONDS;
   $('poolRound').value = poolState.elapsed;
   $('poolElapsed').textContent = poolState.elapsed + ' / ' + (poolState.duration ?? POOL_SECONDS) + ' s';
-  $('poolLast').textContent = lmt(game.poolLastReward);
 };
 
 renderRanking = () => {
