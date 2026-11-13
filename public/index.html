@@ -511,7 +511,7 @@ button:enabled:hover{filter:brightness(1.14)}
 
 
 <div class="room-panels"><div class="card pool-panel pool-dashboard">
-  <h2>Pool DCK</h2>
+  <h2 id="activePoolTitle">Pool DCK</h2>
   <dl class="pool-summary">
     <div><dt>Meu poder ativo</dt><dd id="poolYourPower">0 TH/s</dd></div>
     <div><dt>Poder da rede</dt><dd id="poolNetworkPower">0 TH/s</dd></div>
@@ -521,10 +521,14 @@ button:enabled:hover{filter:brightness(1.14)}
   </dl>
   <button type="button" class="pool-details-button" onclick="document.getElementById('poolDetailsDialog').showModal()">Ver detalhes</button>
   <dialog id="poolDetailsDialog" class="pool-details" aria-labelledby="poolDetailsTitle">
-    <h2 id="poolDetailsTitle">Detalhes da Pool DCK</h2>
-    <dl>
-      <dt>Progresso da rodada</dt><dd><progress id="poolRound" aria-label="Progresso da rodada"></progress> <span id="poolElapsed"></span></dd>
-    </dl>
+    <h2 id="poolDetailsTitle">Escolher pool</h2>
+    <label for="poolChoice">Pool exibida na Sala</label>
+    <select id="poolChoice" onchange="chooseDisplayedPool(this.value)">
+      <option value="DCK">DCK</option>
+      <option value="BTC">BTC · Simulação</option>
+      <option value="DOGE">DOGE · Simulação</option>
+    </select>
+    <p class="muted">BTC e DOGE são simulações visuais. A mineração do jogo credita DCK.</p>
     <form method="dialog"><button type="submit" class="secondary">Fechar</button></form>
   </dialog>
 </div>
@@ -1355,9 +1359,35 @@ function miningGain(seconds){
 
 
 
+let displayedPool = "DCK";
+try {
+  const savedPool = localStorage.getItem("duckminerDisplayedPool");
+  if (["DCK", "BTC", "DOGE"].includes(savedPool)) displayedPool = savedPool;
+} catch {}
+
+function chooseDisplayedPool(currency) {
+  if (!["DCK", "BTC", "DOGE"].includes(currency)) return;
+  displayedPool = currency;
+  try { localStorage.setItem("duckminerDisplayedPool", currency); } catch {}
+  renderPool();
+  $("poolDetailsDialog").close();
+}
+
 function renderPoolEstimate(playerPower, networkPower, reward) {
-  const estimate = networkPower > 0 ? reward * playerPower / networkPower : 0;
-  $("poolEstimate").textContent = estimate.toLocaleString("pt-BR", {maximumFractionDigits: 6}) + " DCK";
+  const simulated = displayedPool !== "DCK";
+  const roundReward = simulated ? POOL_REWARD : reward;
+  const estimate = networkPower > 0 ? roundReward * playerPower / networkPower : 0;
+  const formatReward = value => value.toLocaleString("pt-BR", {maximumFractionDigits: 8}) + " " + displayedPool;
+  $("poolChoice").value = displayedPool;
+  $("activePoolTitle").textContent = "Pool " + displayedPool + (simulated ? " · Simulação" : "");
+  $("poolReward").textContent = formatReward(roundReward);
+  $("poolEstimate").textContent = formatReward(estimate);
+}
+
+function renderPoolCountdown(duration, elapsed) {
+  const seconds = Math.max(0, duration - Math.floor(elapsed));
+  $("poolCountdown").textContent = String(Math.floor(seconds / 60)).padStart(2, "0")
+    + ":" + String(seconds % 60).padStart(2, "0");
 }
 
 function renderPool(){
@@ -1382,6 +1412,7 @@ function renderPool(){
 
   $("poolReward").textContent = lmt(POOL_REWARD);
   renderPoolEstimate(playerPower, networkPower, POOL_REWARD);
+  renderPoolCountdown(POOL_SECONDS, game.poolSeconds || 0);
 
 
 
@@ -1403,15 +1434,12 @@ function renderPool(){
 
 
 
-  $("poolRound").max = POOL_SECONDS;
 
 
 
-  $("poolRound").value = elapsed;
 
 
 
-  $("poolElapsed").textContent = elapsed + " / " + POOL_SECONDS + " s";
 
 
 
@@ -2083,9 +2111,6 @@ $("missions").innerHTML=defs.map(([name,ok,reward],i)=>`<div class="mission"><b>
 
 
 renderRanking();renderDaily();renderPool();
-const secondsToRound = Math.max(0, Number($("poolRound").max) - Math.floor($("poolRound").value));
-$("poolCountdown").textContent = String(Math.floor(secondsToRound / 60)).padStart(2,"0")
-  + ":" + String(secondsToRound % 60).padStart(2,"0");
 $("events").innerHTML=game.history.map(x=>"<p>"+x.replace(/[\p{Extended_Pictographic}\uFE0F]+/gu,"").trim()+"</p>").join("")||"Bem-vindo à sua sala!";
 
 

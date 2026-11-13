@@ -119,10 +119,8 @@ renderPool = () => {
   $('poolNetworkPower').textContent = fmt(poolState.power) + ' TH/s';
   $('poolReward').textContent = lmt(poolState.reward);
   renderPoolEstimate(own, poolState.power, poolState.reward);
+  renderPoolCountdown(poolState.duration ?? POOL_SECONDS, poolState.elapsed);
   $('poolYourPower').textContent = fmt(own) + ' TH/s';
-  $('poolRound').max = poolState.duration ?? POOL_SECONDS;
-  $('poolRound').value = poolState.elapsed;
-  $('poolElapsed').textContent = poolState.elapsed + ' / ' + (poolState.duration ?? POOL_SECONDS) + ' s';
 };
 
 renderRanking = () => {
