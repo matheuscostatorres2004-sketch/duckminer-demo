@@ -353,7 +353,13 @@ button:enabled:hover{filter:brightness(1.14)}
 .coop-table th,.coop-table td { padding:.65rem; border-bottom:1px solid #385044; }
 .coop-table thead { background:#17251f; }
 .pool-actions { display:flex; justify-content:center; gap:.75rem; margin-top:1rem; }
-#poolSplit input { width:5rem; margin-right:.65rem; }
+#poolSplit { margin-top:1rem; }
+.split-summary,.split-step { display:flex; align-items:center; gap:.5rem; }
+.split-summary { gap:1rem; margin-bottom:1rem; }
+#splitGauge { width:3.75rem; aspect-ratio:1; flex:none; border-radius:50%; background:radial-gradient(circle,#121914 53%,transparent 55%),conic-gradient(#48ffab var(--allocated,0%),#334139 0); }
+#poolSplit input { width:4.25rem; text-align:center; }
+.split-step button { padding:.25rem .55rem; }
+#poolDetailsDialog [hidden] { display:none; }
 </style></head>
 
 
@@ -536,16 +542,14 @@ button:enabled:hover{filter:brightness(1.14)}
     </table></div>
     <p class="muted">Split power ajusta a potência nas simulações BTC e DOGE. A pool DCK usa toda a potência ativa.</p>
     <form id="poolSplit" hidden oninput="updatePoolSplitTotal()" onsubmit="savePoolSplit(event)">
-      <fieldset><legend>Distribua até 100% da potência</legend>
-        <label>DCK (%) <input name="DCK" type="number" min="0" max="100" required></label>
-        <label>BTC (%) <input name="BTC" type="number" min="0" max="100" required></label>
-        <label>DOGE (%) <input name="DOGE" type="number" min="0" max="100" required></label>
-      </fieldset>
-      <p id="poolSplitTotal" aria-live="polite"></p>
+      <div class="split-summary"><div id="splitGauge" aria-hidden="true"></div><div><strong>Divisão de potência</strong><p id="poolSplitTotal" aria-live="polite"></p></div></div>
+      <div class="pool-table-scroll"><table class="coop-table">
+      <thead><tr><th>Pool</th><th>Moeda</th><th>Tipo</th><th>Potência (%)</th><th>Meu poder</th></tr></thead>
+      <tbody><tr><th scope="row">DCK - Coop</th><td>DCK</td><td>Coop</td><td><div class="split-step"><button type="button" aria-label="Diminuir DCK" onclick="stepPoolSplit('DCK',-1)">−</button><input aria-label="Percentual DCK" name="DCK" type="number" min="0" max="100" step="1" required><button type="button" aria-label="Aumentar DCK" onclick="stepPoolSplit('DCK',1)">+</button></div></td><td id="splitPowerDCK">0 TH/s</td></tr><tr><th scope="row">BTC - Coop</th><td>BTC</td><td>Coop</td><td><div class="split-step"><button type="button" aria-label="Diminuir BTC" onclick="stepPoolSplit('BTC',-1)">−</button><input aria-label="Percentual BTC" name="BTC" type="number" min="0" max="100" step="1" required><button type="button" aria-label="Aumentar BTC" onclick="stepPoolSplit('BTC',1)">+</button></div></td><td id="splitPowerBTC">0 TH/s</td></tr><tr><th scope="row">DOGE - Coop</th><td>DOGE</td><td>Coop</td><td><div class="split-step"><button type="button" aria-label="Diminuir DOGE" onclick="stepPoolSplit('DOGE',-1)">−</button><input aria-label="Percentual DOGE" name="DOGE" type="number" min="0" max="100" step="1" required><button type="button" aria-label="Aumentar DOGE" onclick="stepPoolSplit('DOGE',1)">+</button></div></td><td id="splitPowerDOGE">0 TH/s</td></tr></tbody></table></div>
       <p id="poolSplitError" role="alert"></p>
-      <button type="submit">Aplicar divisão</button>
+      <div class="pool-actions"><button type="button" class="secondary" onclick="closePoolSplit()">Close</button><button id="savePoolPercentages" type="submit">Salvar percentuais</button></div>
     </form>
-    <form method="dialog" class="pool-actions">
+    <form method="dialog" class="pool-actions" id="poolDetailsActions">
       <button type="submit" class="secondary">Close</button>
       <button type="button" onclick="openPoolSplit()">Split power</button>
     </form>
@@ -1400,13 +1404,34 @@ function openPoolSplit() {
   for (const currency of coopCurrencies) form.elements.namedItem(currency).value = poolSplit[currency];
   $("poolSplitError").textContent = "";
   form.hidden = false;
+  $("poolDetailsActions").hidden = true;
+  $("coopRows").closest(".pool-table-scroll").hidden = true;
   updatePoolSplitTotal();
   form.elements.namedItem("DCK").focus();
+}
+
+function closePoolSplit() {
+  $("poolSplit").hidden = true;
+  $("poolDetailsActions").hidden = false;
+  $("coopRows").closest(".pool-table-scroll").hidden = false;
+  $("poolDetailsActions").querySelector('button[type="button"]').focus();
+}
+
+function stepPoolSplit(currency, delta) {
+  const input = $("poolSplit").elements.namedItem(currency);
+  input.value = Math.max(0, Math.min(100, Math.trunc(Number(input.value)) + delta));
+  updatePoolSplitTotal();
 }
 
 function updatePoolSplitTotal() {
   const form = $("poolSplit");
   const total = coopCurrencies.reduce((sum, c) => sum + Number(form.elements.namedItem(c).value), 0);
+  $("splitGauge").style.setProperty("--allocated", Math.min(total, 100) + "%");
+  $("savePoolPercentages").disabled = total > 100 || !form.checkValidity();
+  for (const currency of coopCurrencies) {
+    const percentage = Number(form.elements.namedItem(currency).value);
+    $("splitPower" + currency).textContent = fmt(power() * percentage / 100) + " TH/s";
+  }
   $("poolSplitTotal").textContent = total > 100
     ? total + "% alocado · limite de 100%"
     : total + "% alocado · " + (100 - total) + "% sem alocar";
@@ -1423,7 +1448,7 @@ function savePoolSplit(event) {
   }
   poolSplit = split;
   try { localStorage.setItem("duckminerPoolSplit", JSON.stringify(split)); } catch {}
-  event.currentTarget.hidden = true;
+  closePoolSplit();
   chooseDisplayedPool(coopCurrencies.reduce((best,c) => split[c] > split[best] ? c : best, displayedPool));
 }
 
