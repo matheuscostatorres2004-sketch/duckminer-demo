@@ -2,7 +2,7 @@
   {
     "name": "Duck Básica",
     "power": 100,
-    "cost": 125,
+    "cost": 525.6,
     "watts": 100,
     "icon": "🖥️",
     "rarity": "Basic"
@@ -10,7 +10,7 @@
   {
     "name": "Duck Avançada",
     "power": 500,
-    "cost": 450,
+    "cost": 2628.0,
     "watts": 250,
     "icon": "💻",
     "rarity": "Basic"
@@ -18,7 +18,7 @@
   {
     "name": "Duck Profissional",
     "power": 1000,
-    "cost": 1250,
+    "cost": 5256.0,
     "watts": 450,
     "icon": "⚙️",
     "rarity": "Basic"
@@ -26,7 +26,7 @@
   {
     "name": "Duck Ultra",
     "power": 2500,
-    "cost": 2750,
+    "cost": 13140.0,
     "watts": 800,
     "icon": "🚀",
     "rarity": "Basic"
@@ -34,7 +34,7 @@
   {
     "name": "Duck Prisma",
     "power": 4200,
-    "cost": 5500,
+    "cost": 22075.2,
     "watts": 900,
     "icon": "💎",
     "rarity": "Basic"
@@ -42,7 +42,7 @@
   {
     "name": "Duck Titã",
     "power": 8500,
-    "cost": 13000,
+    "cost": 44676.0,
     "watts": 1450,
     "icon": "🛡️",
     "rarity": "Basic"
@@ -50,7 +50,7 @@
   {
     "name": "Duck Fênix",
     "power": 16000,
-    "cost": 31000,
+    "cost": 84096.0,
     "watts": 2100,
     "icon": "🔥",
     "rarity": "Basic"

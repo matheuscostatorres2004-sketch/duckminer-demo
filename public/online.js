@@ -1,4 +1,4 @@
-let poolState = {power: 0, elapsed: 0, reward: 10};
+let poolState = {power: 0, elapsed: 0, duration: POOL_SECONDS, reward: POOL_REWARD};
 let rankingState = [];
 let authenticated = false;
 let requestBusy = false;
@@ -121,9 +121,9 @@ renderPool = () => {
   $('poolYourPower').textContent = fmt(own) + ' TH/s';
   $('poolRivalPower').textContent = fmt(poolState.power - own) + ' TH/s';
   $('poolShare').textContent = fmt(poolState.power ? 100 * own / poolState.power : 0) + '%';
-  $('poolRound').max = 60;
+  $('poolRound').max = poolState.duration ?? POOL_SECONDS;
   $('poolRound').value = poolState.elapsed;
-  $('poolElapsed').textContent = poolState.elapsed + ' / 60 s';
+  $('poolElapsed').textContent = poolState.elapsed + ' / ' + (poolState.duration ?? POOL_SECONDS) + ' s';
   $('poolLast').textContent = lmt(game.poolLastReward);
 };
 

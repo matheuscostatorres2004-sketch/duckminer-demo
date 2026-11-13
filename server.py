@@ -24,6 +24,8 @@ from urllib.parse import urlsplit, parse_qs
 ROOT = Path(__file__).resolve().parent
 DB = Path(os.environ.get('DUCKMINER_DB_PATH', str(ROOT / 'data' / 'duckminer.sqlite3')))
 UNIT = 1_000_000
+POOL_SECONDS = 600
+POOL_REWARD_UNITS = 50_000
 DAY = 86400
 SLOTS = 4
 MODELS = json.loads((ROOT / 'catalog.json').read_text(encoding='utf-8')) if (ROOT / 'catalog.json').exists() else []
@@ -130,10 +132,10 @@ def advance(db, now):
     while last < now:
         # Empty pools can skip whole intervals after downtime.
         if not any(power(s) for s in states.values()) and not any(s['work'] for s in states.values()):
-            start += max(0, (now - start) // 60) * 60
+            start += max(0, (now - start) // POOL_SECONDS) * POOL_SECONDS
             last = now
             break
-        end = min(now, start + 60)
+        end = min(now, start + POOL_SECONDS)
         duration = end - last
         for s in states.values():
             installed_power = power(s)
@@ -141,13 +143,13 @@ def advance(db, now):
                 s['work'] += installed_power * duration
                 s['seconds'] += duration
         last = end
-        if end == start + 60:
+        if end == start + POOL_SECONDS:
             total = sum(s['work'] for s in states.values())
-            shares = {uid: (10 * UNIT * s['work']) // total for uid, s in states.items() if s['work']} if total else {}
+            shares = {uid: (POOL_REWARD_UNITS * s['work']) // total for uid, s in states.items() if s['work']} if total else {}
             if shares:
                 # Distribute rounding remainder exactly, without creating extra DCK.
-                ordered = sorted(shares, key=lambda uid: (-(10 * UNIT * states[uid]['work'] % total), uid))
-                for uid in ordered[:10 * UNIT - sum(shares.values())]:
+                ordered = sorted(shares, key=lambda uid: (-(POOL_REWARD_UNITS * states[uid]['work'] % total), uid))
+                for uid in ordered[:POOL_REWARD_UNITS - sum(shares.values())]:
                     shares[uid] += 1
             for uid, amount in shares.items():
                 db.execute('INSERT INTO payouts VALUES(?,?,?)', (end, uid, amount))
@@ -353,7 +355,7 @@ def snapshot(db, uid):
     return {'game': {**s, 'balance': s['coins']/UNIT, 'total': s['mined']/UNIT,
                      'running': bool(active(s)), 'metrics': [], 'poolSeconds': elapsed,
                      'poolLastReward': s['lastReward']/UNIT},
-            'pool': {'power': network, 'elapsed': elapsed, 'reward': 10},
+            'pool': {'power': network, 'elapsed': elapsed, 'duration': POOL_SECONDS, 'reward': POOL_REWARD_UNITS / UNIT},
             'ranking': sorted([{'name': json.loads(u['state']).get('settings', {}).get('displayName', u['name']), 'power': active(json.loads(u['state'])),
                                 'mine': u['id'] == uid} for u in users], key=lambda u: -u['power']),
             'user': next(u['name'] for u in users if u['id'] == uid),
