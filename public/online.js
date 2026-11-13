@@ -59,7 +59,7 @@ async function api(path, data, key, signal) {
 }
 
 function showLogin() {
-  $("sessionLoading").hidden = true;
+  $("sessionLoading")?.setAttribute("hidden", "");
   authenticated = false;
   document.body.classList.add("auth-screen");
   $('accountGate').hidden = false;
@@ -95,7 +95,7 @@ function receive(result) {
     $('settingsName').value = settings.displayName;
     $('settingsZoom').value = String(settings.zoom);
   }
-  $("sessionLoading").hidden = true;
+  $("sessionLoading")?.setAttribute("hidden", "");
   $('accountGate').hidden = true;
   document.querySelector('main').hidden = false;
   document.querySelector('header').hidden = false;
