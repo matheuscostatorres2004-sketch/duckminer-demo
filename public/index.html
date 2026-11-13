@@ -535,12 +535,13 @@ button:enabled:hover{filter:brightness(1.14)}
       <tbody id="coopRows"></tbody>
     </table></div>
     <p class="muted">Split power ajusta a potência nas simulações BTC e DOGE. A pool DCK usa toda a potência ativa.</p>
-    <form id="poolSplit" hidden onsubmit="savePoolSplit(event)">
-      <fieldset><legend>Distribua 100% da potência</legend>
+    <form id="poolSplit" hidden oninput="updatePoolSplitTotal()" onsubmit="savePoolSplit(event)">
+      <fieldset><legend>Distribua até 100% da potência</legend>
         <label>DCK (%) <input name="DCK" type="number" min="0" max="100" required></label>
         <label>BTC (%) <input name="BTC" type="number" min="0" max="100" required></label>
         <label>DOGE (%) <input name="DOGE" type="number" min="0" max="100" required></label>
       </fieldset>
+      <p id="poolSplitTotal" aria-live="polite"></p>
       <p id="poolSplitError" role="alert"></p>
       <button type="submit">Aplicar divisão</button>
     </form>
@@ -1385,7 +1386,7 @@ try {
   if (coopCurrencies.includes(savedPool)) displayedPool = savedPool;
   const savedSplit = JSON.parse(localStorage.getItem("duckminerPoolSplit"));
   if (savedSplit && coopCurrencies.every(c => Number.isInteger(savedSplit[c]) && savedSplit[c] >= 0)
-      && coopCurrencies.reduce((sum,c) => sum + savedSplit[c],0) === 100) poolSplit = savedSplit;
+      && coopCurrencies.reduce((sum,c) => sum + savedSplit[c],0) <= 100) poolSplit = savedSplit;
 } catch {}
 
 function chooseDisplayedPool(currency) {
@@ -1399,15 +1400,25 @@ function openPoolSplit() {
   for (const currency of coopCurrencies) form.elements.namedItem(currency).value = poolSplit[currency];
   $("poolSplitError").textContent = "";
   form.hidden = false;
+  updatePoolSplitTotal();
   form.elements.namedItem("DCK").focus();
+}
+
+function updatePoolSplitTotal() {
+  const form = $("poolSplit");
+  const total = coopCurrencies.reduce((sum, c) => sum + Number(form.elements.namedItem(c).value), 0);
+  $("poolSplitTotal").textContent = total > 100
+    ? total + "% alocado · limite de 100%"
+    : total + "% alocado · " + (100 - total) + "% sem alocar";
+  $("poolSplitError").textContent = "";
 }
 
 function savePoolSplit(event) {
   event.preventDefault();
   const values = new FormData(event.currentTarget);
   const split = Object.fromEntries(coopCurrencies.map(c => [c, Number(values.get(c))]));
-  if (coopCurrencies.reduce((sum,c) => sum + split[c],0) !== 100) {
-    $("poolSplitError").textContent = "A soma deve ser 100%.";
+  if (coopCurrencies.reduce((sum,c) => sum + split[c],0) > 100) {
+    $("poolSplitError").textContent = "A soma pode ser de até 100%.";
     return;
   }
   poolSplit = split;
