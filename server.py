@@ -10,6 +10,7 @@ import random
 import re
 import secrets
 import sqlite3
+from postgres_db import connect_postgres
 import threading
 import time
 import webbrowser
@@ -48,13 +49,16 @@ class Connection(sqlite3.Connection):
 
 
 def connect():
+    if os.environ.get("DATABASE_URL"):
+        return connect_postgres(os.environ["DATABASE_URL"])
     db = sqlite3.connect(DB, timeout=30, factory=Connection)
     db.row_factory = sqlite3.Row
     return db
 
 
 def initialize():
-    DB.parent.mkdir(parents=True, exist_ok=True)
+    if not os.environ.get("DATABASE_URL"):
+        DB.parent.mkdir(parents=True, exist_ok=True)
     with connect() as db:
         db.executescript('''
         PRAGMA journal_mode=WAL;
@@ -100,7 +104,7 @@ def initialize():
             db.execute("ALTER TABLE requests ADD COLUMN body_hash TEXT NOT NULL DEFAULT ''")
         btc.initialize(db)
         now = int(time.time())
-        db.execute('INSERT OR IGNORE INTO pool VALUES(1,?,?)', (now, now - now % 60))
+        db.execute('INSERT OR IGNORE INTO pool VALUES(1,?,?)', (now, now - now % POOL_SECONDS))
 
 
 def fresh():
