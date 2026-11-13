@@ -225,7 +225,20 @@ def slot(s, data, prefix=''):
 def act(s, data):
     name = data.get('action')
     message = 'Operação concluída.'
-    if name == 'pool_split':
+    if name == 'convert_btc_balance':
+        cfg = btc.config()
+        if not cfg['enabled']:
+            raise ValueError('Conversão BTC indisponível.')
+        sats = btc.amount(data.get('amount'))
+        if sats > s.get('btcDepositedSats', 0):
+            raise ValueError('Saldo BTC depositado insuficiente.')
+        credit = int(Decimal(sats) * Decimal(cfg['rate']) * UNIT / btc.SATOSHIS)
+        if not 0 < credit <= 1000000 * UNIT:
+            raise ValueError('Conversão fora do limite.')
+        s['btcDepositedSats'] -= sats
+        s['coins'] += credit
+        message = f'Conversão concluída: +{credit / UNIT:.6f} DCK.'
+    elif name == 'pool_split':
         split = data.get('split')
         if (not isinstance(split, dict) or set(split) != set(DEFAULT_SPLIT)
                 or any(type(v) is not int or not 0 <= v <= 100 for v in split.values())

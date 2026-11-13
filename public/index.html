@@ -752,6 +752,9 @@ button:enabled:hover{filter:brightness(1.14)}
 <section hidden id="tab-wallet">
 
   <h2 class="wallet-heading">Carteira</h2>
+<div class="card"><h3>Saldo total em BTC</h3><strong id="btcCombined">0 BTC</strong>
+<p>Minerado (simulado): <span id="btcSimulated">0 BTC</span><br>
+Depositado e disponível para conversão: <span id="btcDeposited">0 BTC</span></p></div>
 
   <div class="wallet-layout">
 
@@ -779,15 +782,21 @@ button:enabled:hover{filter:brightness(1.14)}
 
       <div id="walletPanelConvert"><div class="card">
 
-<h2>Trocar BTC por DCK</h2><p class="wallet-rate">1 DCK = US$ 1</p><p class="hint">Referência para compra de créditos do jogo.</p>
+<h2>Converter saldo BTC em DCK</h2>
+<form id="btcBalanceForm">
+<label for="btcBalanceAmount">Quantidade de BTC depositado</label>
+<input id="btcBalanceAmount" type="number" min="0.00000001" step="0.00000001" required>
+<button type="submit">Converter saldo</button>
+</form>
+<h2>Solicitar depósito BTC</h2><p class="wallet-rate">1 DCK = US$ 1</p><p class="hint">Referência para compra de créditos do jogo.</p>
 
 <p id="btcRate"></p><p id="btcConversionAvailability"></p>
 
-<form id="btcConversionForm"><label for="btcConversionAmount">Quantidade a converter</label><div class="wallet-amount-field"><input id="btcConversionAmount" type="number" min="0.00000001" max="21000000" step="0.00000001" placeholder="0,00000000" required><span>BTC</span></div><div class="wallet-quote-box"><p id="btcConversionPreview"></p></div><button type="submit" id="btcConversionSubmit">Solicitar conversão BTC → DCK</button></form>
+<form id="btcConversionForm"><label for="btcConversionAmount">Quantidade a converter</label><div class="wallet-amount-field"><input id="btcConversionAmount" type="number" min="0.00000001" max="21000000" step="0.00000001" placeholder="0,00000000" required><span>BTC</span></div><div class="wallet-quote-box"><p id="btcConversionPreview"></p></div><button type="submit" id="btcConversionSubmit">Solicitar depósito BTC</button></form>
 
 <p id="btcConversionMessage" role="status"></p>
 
-<p class="hint">Aguarde o endereço exclusivo da solicitação, envie o valor exato e informe o TXID. O administrador confere o pagamento antes de creditar DCK.</p>
+<p class="hint">Aguarde o endereço exclusivo da solicitação, envie o valor exato e informe o TXID. Após conferência, o BTC entra no saldo depositado.</p>
 
 <div id="btcInvoices"></div>
 

@@ -26,7 +26,7 @@ def config():
     enabled = (valid and os.environ.get('DUCKMINER_MANUAL_DEPOSITS') == '1'
                and os.environ.get('DUCKMINER_PERSISTENT_STORAGE_CONFIRMED') == '1'
                and os.environ.get('DUCKMINER_DEMO') != '1'
-               and bool(os.environ.get('DUCKMINER_DB_PATH')))
+               and bool(os.environ.get('DATABASE_URL') or os.environ.get('DUCKMINER_DB_PATH')))
     return dict(enabled=enabled, rate=rate if valid else None, dckUsd='1', source='Cotação definida pelo administrador')
 
 
@@ -144,8 +144,8 @@ def action(db, uid, data, now, administrative=False):
         if not user or user['blocked']:
             raise ValueError('Conta indisponível.')
         state = json.loads(user['state'])
-        state['coins'] += invoice['credit']
-        state['history'].insert(0,'Depósito BTC aprovado: +'+str(invoice['credit']/UNIT)+' DCK')
+        state['btcDepositedSats'] = state.get('btcDepositedSats', 0) + invoice['amount']
+        state['history'].insert(0,'Depósito BTC aprovado: +'+str(invoice['amount']/SATOSHIS)+' BTC')
         state['history'] = state['history'][:45]
         db.execute('UPDATE users SET state=? WHERE id=?',(json.dumps(state),invoice['user_id']))
         db.execute("UPDATE btc_deposits SET status='approved',vout=?,confirmations=?,approved_at=? WHERE id=?",(vout,confirmations,now,invoice['id']))

@@ -70,6 +70,12 @@ function showLogin() {
 function receive(result) {
   const metrics = game.metrics || [];
   game = result.game;
+  const simulatedSats = (game.miningWallet?.BTC || 0) * 100;
+  const depositedSats = game.btcDepositedSats || 0;
+  const formatBtc = sats => (sats / 100000000).toLocaleString('pt-BR', {maximumFractionDigits:8}) + ' BTC';
+  $('btcCombined').textContent = formatBtc(simulatedSats + depositedSats);
+  $('btcSimulated').textContent = formatBtc(simulatedSats);
+  $('btcDeposited').textContent = formatBtc(depositedSats);
   for (const machine of [...game.inventory, ...game.racks.flat().filter(Boolean)]) {
     machine.name = machine.name.replace(/^Antminer\b/, 'Duck');
     machine.rarity = 'Basic';
@@ -419,3 +425,10 @@ function removeRack(position) {
     return serverAction('remove_rack', {position});
   }
 }
+
+$('btcBalanceForm').addEventListener('submit', async event => {
+  event.preventDefault();
+  if (supportTarget !== null) return;
+  const input = $('btcBalanceAmount');
+  if (await serverAction('convert_btc_balance', {amount: input.value})) input.value = '';
+});
