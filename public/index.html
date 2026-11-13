@@ -346,6 +346,14 @@ button:enabled:hover{filter:brightness(1.14)}
 .profile-panels{display:grid;gap:12px}.profile-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:0;padding:12px}.profile-stats>div{background:#090d17;padding:8px;border-radius:5px}.profile-stats dt{font-size:11px;color:var(--muted)}.profile-stats dd{margin:4px 0 0;color:var(--green);font-weight:750}
 #playerSettings{padding:0 12px 12px}#playerSettings label{display:inline-block;margin-bottom:5px}#playerSettings input,#playerSettings select{width:min(100%,310px)}
 @media(max-width:650px){.profile-layout{grid-template-columns:1fr}.player-profile{padding:12px}}
+</style><style>
+#poolDetailsDialog { width:min(920px,92vw); max-height:85vh; overflow:auto; }
+.pool-table-scroll { overflow-x:auto; }
+.coop-table { width:100%; border-collapse:collapse; text-align:left; white-space:nowrap; }
+.coop-table th,.coop-table td { padding:.65rem; border-bottom:1px solid #385044; }
+.coop-table thead { background:#17251f; }
+.pool-actions { display:flex; justify-content:center; gap:.75rem; margin-top:1rem; }
+#poolSplit input { width:5rem; margin-right:.65rem; }
 </style></head>
 
 
@@ -521,15 +529,25 @@ button:enabled:hover{filter:brightness(1.14)}
   </dl>
   <button type="button" class="pool-details-button" onclick="document.getElementById('poolDetailsDialog').showModal()">Ver detalhes</button>
   <dialog id="poolDetailsDialog" class="pool-details" aria-labelledby="poolDetailsTitle">
-    <h2 id="poolDetailsTitle">Escolher pool</h2>
-    <label for="poolChoice">Pool exibida na Sala</label>
-    <select id="poolChoice" onchange="chooseDisplayedPool(this.value)">
-      <option value="DCK">DCK</option>
-      <option value="BTC">BTC · Simulação</option>
-      <option value="DOGE">DOGE · Simulação</option>
-    </select>
-    <p class="muted">BTC e DOGE são simulações visuais. A mineração do jogo credita DCK.</p>
-    <form method="dialog"><button type="submit" class="secondary">Fechar</button></form>
+    <h2 id="poolDetailsTitle">Detalhes das pools</h2>
+    <div class="pool-table-scroll"><table class="coop-table">
+      <thead><tr><th>Pool</th><th>Moeda</th><th>Tipo</th><th>Meu poder</th><th>Poder da pool</th><th>Prêmio / 10 min</th><th>Minha estimativa</th></tr></thead>
+      <tbody id="coopRows"></tbody>
+    </table></div>
+    <p class="muted">Split power ajusta a potência nas simulações BTC e DOGE. A pool DCK usa toda a potência ativa.</p>
+    <form id="poolSplit" hidden onsubmit="savePoolSplit(event)">
+      <fieldset><legend>Distribua 100% da potência</legend>
+        <label>DCK (%) <input name="DCK" type="number" min="0" max="100" required></label>
+        <label>BTC (%) <input name="BTC" type="number" min="0" max="100" required></label>
+        <label>DOGE (%) <input name="DOGE" type="number" min="0" max="100" required></label>
+      </fieldset>
+      <p id="poolSplitError" role="alert"></p>
+      <button type="submit">Aplicar divisão</button>
+    </form>
+    <form method="dialog" class="pool-actions">
+      <button type="submit" class="secondary">Close</button>
+      <button type="button" onclick="openPoolSplit()">Split power</button>
+    </form>
   </dialog>
 </div>
 <div class="card room-missions">
@@ -1359,29 +1377,68 @@ function miningGain(seconds){
 
 
 
+const coopCurrencies = ["DCK", "BTC", "DOGE"];
 let displayedPool = "DCK";
+let poolSplit = {DCK:100, BTC:0, DOGE:0};
 try {
   const savedPool = localStorage.getItem("duckminerDisplayedPool");
-  if (["DCK", "BTC", "DOGE"].includes(savedPool)) displayedPool = savedPool;
+  if (coopCurrencies.includes(savedPool)) displayedPool = savedPool;
+  const savedSplit = JSON.parse(localStorage.getItem("duckminerPoolSplit"));
+  if (savedSplit && coopCurrencies.every(c => Number.isInteger(savedSplit[c]) && savedSplit[c] >= 0)
+      && coopCurrencies.reduce((sum,c) => sum + savedSplit[c],0) === 100) poolSplit = savedSplit;
 } catch {}
 
 function chooseDisplayedPool(currency) {
-  if (!["DCK", "BTC", "DOGE"].includes(currency)) return;
   displayedPool = currency;
   try { localStorage.setItem("duckminerDisplayedPool", currency); } catch {}
   renderPool();
-  $("poolDetailsDialog").close();
+}
+
+function openPoolSplit() {
+  const form = $("poolSplit");
+  for (const currency of coopCurrencies) form.elements.namedItem(currency).value = poolSplit[currency];
+  $("poolSplitError").textContent = "";
+  form.hidden = false;
+  form.elements.namedItem("DCK").focus();
+}
+
+function savePoolSplit(event) {
+  event.preventDefault();
+  const values = new FormData(event.currentTarget);
+  const split = Object.fromEntries(coopCurrencies.map(c => [c, Number(values.get(c))]));
+  if (coopCurrencies.reduce((sum,c) => sum + split[c],0) !== 100) {
+    $("poolSplitError").textContent = "A soma deve ser 100%.";
+    return;
+  }
+  poolSplit = split;
+  try { localStorage.setItem("duckminerPoolSplit", JSON.stringify(split)); } catch {}
+  event.currentTarget.hidden = true;
+  chooseDisplayedPool(coopCurrencies.reduce((best,c) => split[c] > split[best] ? c : best, displayedPool));
 }
 
 function renderPoolEstimate(playerPower, networkPower, reward) {
-  const simulated = displayedPool !== "DCK";
-  const roundReward = simulated ? POOL_REWARD : reward;
-  const estimate = networkPower > 0 ? roundReward * playerPower / networkPower : 0;
-  const formatReward = value => value.toLocaleString("pt-BR", {maximumFractionDigits: 8}) + " " + displayedPool;
-  $("poolChoice").value = displayedPool;
-  $("activePoolTitle").textContent = "Pool " + displayedPool + (simulated ? " · Simulação" : "");
-  $("poolReward").textContent = formatReward(roundReward);
-  $("poolEstimate").textContent = formatReward(estimate);
+  const formatReward = (value,currency) => value.toLocaleString("pt-BR", {maximumFractionDigits:8}) + " " + currency;
+  const rows = coopCurrencies.map(currency => {
+    const simulated = currency !== "DCK";
+    const own = simulated ? playerPower * poolSplit[currency] / 100 : playerPower;
+    const total = simulated ? own : networkPower;
+    const prize = simulated ? POOL_REWARD : reward;
+    const estimate = total > 0 ? prize * own / total : 0;
+    return {currency,simulated,own,total,prize,estimate};
+  });
+  const markup = rows.map(({currency,simulated,own,total,prize,estimate}) =>
+    `<tr><th scope="row"><button type="button" aria-pressed="${currency === displayedPool}" onclick="chooseDisplayedPool('${currency}')">${currency} - Coop</button></th><td>${currency}</td><td>${simulated ? "Coop · Simulação" : "Coop"}</td><td>${fmt(own)} TH/s</td><td>${fmt(total)} TH/s</td><td>${formatReward(prize,currency)}</td><td>${formatReward(estimate,currency)}</td></tr>`
+  ).join("");
+  if ($("coopRows").dataset.rendered !== markup) {
+    $("coopRows").innerHTML = markup;
+    $("coopRows").dataset.rendered = markup;
+  }
+  const selected = rows.find(row => row.currency === displayedPool);
+  $("activePoolTitle").textContent = "Pool " + displayedPool + (selected.simulated ? " · Simulação" : "");
+  $("poolYourPower").textContent = fmt(selected.own) + " TH/s";
+  $("poolNetworkPower").textContent = fmt(selected.total) + " TH/s";
+  $("poolReward").textContent = formatReward(selected.prize,displayedPool);
+  $("poolEstimate").textContent = formatReward(selected.estimate,displayedPool);
 }
 
 function renderPoolCountdown(duration, elapsed) {
