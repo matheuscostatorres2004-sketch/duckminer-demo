@@ -236,22 +236,44 @@ async function loadAdmin(offset = adminOffset) {
         $('adminPlayerTitle').textContent = player.displayName + ' (@' + player.name + ')';
         const balances = player.miningWallet || {};
         const formatBalance = value => (value ?? 0).toLocaleString('pt-BR', {maximumFractionDigits: 6});
-        const fields = [
-          ['ID da conta', player.id],
-          ['Situação', player.blocked ? 'Bloqueada' : 'Liberada'],
-          ['Saldo DCK', formatBalance(player.balance) + ' DCK'],
-          ['Mineração simulada BTC', formatBalance(balances.BTC) + ' BTC'],
-          ['Mineração simulada DOGE', formatBalance(balances.DOGE) + ' DOGE'],
-          ['Máquinas instaladas', player.installed],
-          ['Máquinas no estoque', player.inventory]
-        ];
-        $('adminPlayerDetails').replaceChildren(...fields.flatMap(([label, value]) => {
-          const term = document.createElement('dt');
-          const detail = document.createElement('dd');
-          term.textContent = label;
-          detail.textContent = value;
-          return [term, detail];
-        }));
+        const dialog = $('adminPlayerDialog');
+        const tabs = [...dialog.querySelectorAll('[data-player-view]')];
+        const machineLabel = machine => machine
+          ? machine.name + ' · ' + fmt(machine.power) + ' TH/s'
+          : 'Espaço vazio';
+        const views = {
+          room: [
+            ['Poder instalado', fmt(player.power) + ' TH/s'],
+            ...(player.roomMachines || []).map((rack, index) => [
+              'Rack ' + ((player.rackPositions?.[index] ?? index) + 1),
+              rack.map((machine, slot) => (slot + 1) + '. ' + machineLabel(machine))
+            ])
+          ],
+          wallet: [
+            ['Saldo DCK', formatBalance(player.balance) + ' DCK'],
+            ['Mineração simulada BTC', formatBalance(balances.BTC) + ' BTC'],
+            ['Mineração simulada DOGE', formatBalance(balances.DOGE) + ' DOGE']
+          ],
+          stock: [
+            ['Racks disponíveis', player.rackStock],
+            ['Máquinas disponíveis', (player.stockMachines || []).map(machineLabel)]
+          ]
+        };
+        function showView(view) {
+          for (const tab of tabs) tab.setAttribute('aria-pressed', String(tab.dataset.playerView === view));
+          $('adminPlayerDetails').replaceChildren(...views[view].flatMap(([label, value]) => {
+            const term = document.createElement('dt');
+            term.textContent = label;
+            const values = Array.isArray(value) ? value : [value];
+            return [term, ...(values.length ? values : ['Nenhum']).map(item => {
+              const detail = document.createElement('dd');
+              detail.textContent = item;
+              return detail;
+            })];
+          }));
+        }
+        for (const tab of tabs) tab.onclick = () => showView(tab.dataset.playerView);
+        showView('room');
         $('adminPlayerDialog').showModal();
       };
       row.append(viewAccount);

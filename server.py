@@ -501,6 +501,10 @@ def admin_snapshot(db, now, offset):
                             miningWallet={currency: state.get('miningWallet', {}).get(currency, 0) / UNIT
                                           for currency in ('BTC', 'DOGE')},
                             installed=len(machines(state)), inventory=len(state['inventory']),
+                            roomMachines=[[{'name': m['name'], 'power': m['power']} if m else None
+                                           for m in rack] for rack in state['racks']],
+                            stockMachines=[{'name': m['name'], 'power': m['power']} for m in state['inventory']],
+                            rackPositions=state.get('rackPositions') or list(range(len(state['racks']))),
                             power=power(state), racks=len(state['racks']),
                             rackStock=state.get('rackStock', 0), activeSessions=session['count'],
                             lastSeen=session['seen'] or 0, admin=user['name'] == os.environ.get('DUCKMINER_ADMIN_USERNAME','').strip().lower()))
