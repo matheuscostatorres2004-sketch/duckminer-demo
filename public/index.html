@@ -540,7 +540,7 @@ button:enabled:hover{filter:brightness(1.14)}
       <thead><tr><th>Pool</th><th>Moeda</th><th>Tipo</th><th>Meu poder</th><th>Poder da pool</th><th>Prêmio / 10 min</th><th>Minha estimativa</th></tr></thead>
       <tbody id="coopRows"></tbody>
     </table></div>
-    <p class="muted">Split power ajusta a potência nas simulações BTC e DOGE. A pool DCK usa toda a potência ativa.</p>
+    <p class="muted">BTC e DOGE são recompensas simuladas na carteira do jogo.</p>
     <form id="poolSplit" hidden oninput="updatePoolSplitTotal()" onsubmit="savePoolSplit(event)">
       <div class="split-summary"><div id="splitGauge" aria-hidden="true"></div><div><strong>Divisão de potência</strong><p id="poolSplitTotal" aria-live="polite"></p></div></div>
       <div class="pool-table-scroll"><table class="coop-table">
@@ -709,7 +709,7 @@ button:enabled:hover{filter:brightness(1.14)}
 
 
 
-<section hidden id="tab-wallet">
+<section hidden id="tab-wallet"><div class="card"><h3>Recompensas simuladas de mineração</h3><p>BTC: <strong id="minedBTC">0</strong> · DOGE: <strong id="minedDOGE">0</strong></p></div>
 
   <h2 class="wallet-heading">Carteira</h2>
 
@@ -1438,7 +1438,7 @@ function updatePoolSplitTotal() {
   $("poolSplitError").textContent = "";
 }
 
-function savePoolSplit(event) {
+async function savePoolSplit(event) {
   event.preventDefault();
   const values = new FormData(event.currentTarget);
   const split = Object.fromEntries(coopCurrencies.map(c => [c, Number(values.get(c))]));
@@ -1446,18 +1446,20 @@ function savePoolSplit(event) {
     $("poolSplitError").textContent = "A soma pode ser de até 100%.";
     return;
   }
-  poolSplit = split;
-  try { localStorage.setItem("duckminerPoolSplit", JSON.stringify(split)); } catch {}
+  if (await serverAction("pool_split", {split}) !== true) {
+    $("poolSplitError").textContent = "Não foi possível salvar. Tente novamente.";
+    return;
+  }
   closePoolSplit();
   chooseDisplayedPool(coopCurrencies.reduce((best,c) => split[c] > split[best] ? c : best, displayedPool));
 }
 
-function renderPoolEstimate(playerPower, networkPower, reward) {
+function renderPoolEstimate(playerPower, networkPower, reward, powers) {
   const formatReward = (value,currency) => value.toLocaleString("pt-BR", {maximumFractionDigits:8}) + " " + currency;
   const rows = coopCurrencies.map(currency => {
     const simulated = currency !== "DCK";
-    const own = simulated ? playerPower * poolSplit[currency] / 100 : playerPower;
-    const total = simulated ? own : networkPower;
+    const own = playerPower * poolSplit[currency] / 100;
+    const total = powers?.[currency] ?? (simulated ? own : networkPower);
     const prize = simulated ? POOL_REWARD : reward;
     const estimate = total > 0 ? prize * own / total : 0;
     return {currency,simulated,own,total,prize,estimate};

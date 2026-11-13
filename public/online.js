@@ -44,6 +44,11 @@ function receive(result) {
   game.history = game.history.map(entry => entry.replace(/\bAntminer\b/g, 'Duck'));
   game.metrics = metrics;
   poolState = result.pool;
+  poolSplit = game.poolSplit || {DCK:100, BTC:0, DOGE:0};
+  for (const currency of ["BTC", "DOGE"]) {
+    $("mined" + currency).textContent = ((game.miningWallet?.[currency] || 0) / 1000000)
+      .toLocaleString("pt-BR", {maximumFractionDigits:6});
+  }
   rankingState = result.ranking;
   $('adminMenuButton').hidden = !result.adminEligible;
   if (!result.adminEligible) $('tab-admin').hidden = true;
@@ -83,6 +88,7 @@ async function serverAction(action, fields = {}) {
       clearTimeout(purchaseNoticeTimer);
       purchaseNoticeTimer = setTimeout(() => $('purchaseNotice').textContent = '', 4500);
     }
+    return true;
   } catch (error) {
     $('connectionStatus').textContent = error.message;
   } finally {
@@ -118,7 +124,7 @@ renderPool = () => {
   const own = game.running ? power() : 0;
   $('poolNetworkPower').textContent = fmt(poolState.power) + ' TH/s';
   $('poolReward').textContent = lmt(poolState.reward);
-  renderPoolEstimate(own, poolState.power, poolState.reward);
+  renderPoolEstimate(own, poolState.power, poolState.reward, poolState.powers);
   renderPoolCountdown(poolState.duration ?? POOL_SECONDS, poolState.elapsed);
   $('poolYourPower').textContent = fmt(own) + ' TH/s';
 };

@@ -26,6 +26,7 @@ DB = Path(os.environ.get('DUCKMINER_DB_PATH', str(ROOT / 'data' / 'duckminer.sql
 UNIT = 1_000_000
 POOL_SECONDS = 600
 POOL_REWARD_UNITS = 50_000
+DEFAULT_SPLIT = dict(DCK=100, BTC=0, DOGE=0)
 DAY = 86400
 SLOTS = 4
 MODELS = json.loads((ROOT / 'catalog.json').read_text(encoding='utf-8')) if (ROOT / 'catalog.json').exists() else []
@@ -131,7 +132,7 @@ def advance(db, now):
     states = {r['id']: json.loads(r['state']) for r in db.execute('SELECT id,state FROM users WHERE blocked=0')}
     while last < now:
         # Empty pools can skip whole intervals after downtime.
-        if not any(power(s) for s in states.values()) and not any(s['work'] for s in states.values()):
+        if not any(power(s) for s in states.values()) and not any(s['work'] or any(s.get('poolWork', {}).values()) for s in states.values()):
             start += max(0, (now - start) // POOL_SECONDS) * POOL_SECONDS
             last = now
             break
@@ -140,26 +141,36 @@ def advance(db, now):
         for s in states.values():
             installed_power = power(s)
             if installed_power:
-                s['work'] += installed_power * duration
+                work = s.setdefault('poolWork', {})
+                for currency, percent in s.get('poolSplit', DEFAULT_SPLIT).items():
+                    work[currency] = work.get(currency, 0) + installed_power * duration * percent
                 s['seconds'] += duration
         last = end
         if end == start + POOL_SECONDS:
-            total = sum(s['work'] for s in states.values())
-            shares = {uid: (POOL_REWARD_UNITS * s['work']) // total for uid, s in states.items() if s['work']} if total else {}
-            if shares:
-                # Distribute rounding remainder exactly, without creating extra DCK.
-                ordered = sorted(shares, key=lambda uid: (-(POOL_REWARD_UNITS * states[uid]['work'] % total), uid))
-                for uid in ordered[:POOL_REWARD_UNITS - sum(shares.values())]:
-                    shares[uid] += 1
-            for uid, amount in shares.items():
-                db.execute('INSERT INTO payouts VALUES(?,?,?)', (end, uid, amount))
-                s = states[uid]
-                s['coins'] += amount
-                s['mined'] += amount
-                s['lastReward'] = amount
-                event(s, f'Pool DCK: +{amount / UNIT:.6f} DCK')
-            for s in states.values():
-                s['work'] = 0
+            for currency in DEFAULT_SPLIT:
+                work = {uid: state.get('poolWork', {}).get(currency, 0)
+                        + (state['work'] * 100 if currency == 'DCK' else 0)
+                        for uid, state in states.items()}
+                total = sum(work.values())
+                shares = {uid: (POOL_REWARD_UNITS * value) // total for uid, value in work.items() if value} if total else {}
+                if shares:
+                    # Distribute rounding remainder exactly, without creating extra DCK.
+                    ordered = sorted(shares, key=lambda uid: (-(POOL_REWARD_UNITS * work[uid] % total), uid))
+                    for uid in ordered[:POOL_REWARD_UNITS - sum(shares.values())]:
+                        shares[uid] += 1
+                for uid, amount in shares.items():
+                    state = states[uid]
+                    if currency == 'DCK':
+                        db.execute('INSERT INTO payouts VALUES(?,?,?)', (end, uid, amount))
+                        state['coins'] += amount
+                        state['mined'] += amount
+                        state['lastReward'] = amount
+                    else:
+                        wallet = state.setdefault('miningWallet', {})
+                        wallet[currency] = wallet.get(currency, 0) + amount
+            for state in states.values():
+                state['work'] = 0
+                state['poolWork'] = {}
             start = end
     for uid, s in states.items():
         db.execute('UPDATE users SET state=? WHERE id=?', (json.dumps(s), uid))
@@ -210,7 +221,15 @@ def slot(s, data, prefix=''):
 def act(s, data):
     name = data.get('action')
     message = 'Operação concluída.'
-    if name == 'settings':
+    if name == 'pool_split':
+        split = data.get('split')
+        if (not isinstance(split, dict) or set(split) != set(DEFAULT_SPLIT)
+                or any(type(v) is not int or not 0 <= v <= 100 for v in split.values())
+                or sum(split.values()) > 100):
+            raise ValueError('Divisão inválida.')
+        s['poolSplit'] = split
+        message = 'Percentuais salvos.'
+    elif name == 'settings':
         display = data.get('displayName')
         zoom = data.get('zoom')
         if not isinstance(display, str) or not 2 <= len(display.strip()) <= 24 or any(ord(c) < 32 for c in display):
@@ -350,12 +369,16 @@ def snapshot(db, uid):
     for period in MISSION:
         progress(s, period)
     active = power
-    network = sum(active(json.loads(u['state'])) for u in users)
+    network = dict.fromkeys(DEFAULT_SPLIT, 0)
+    for user in users:
+        state = json.loads(user['state'])
+        for currency, percent in state.get('poolSplit', DEFAULT_SPLIT).items():
+            network[currency] += active(state) * percent / 100
     elapsed = db.execute('SELECT last-start FROM pool WHERE id=1').fetchone()[0]
     return {'game': {**s, 'balance': s['coins']/UNIT, 'total': s['mined']/UNIT,
                      'running': bool(active(s)), 'metrics': [], 'poolSeconds': elapsed,
                      'poolLastReward': s['lastReward']/UNIT},
-            'pool': {'power': network, 'elapsed': elapsed, 'duration': POOL_SECONDS, 'reward': POOL_REWARD_UNITS / UNIT},
+            'pool': {'power': network['DCK'], 'powers': network, 'elapsed': elapsed, 'duration': POOL_SECONDS, 'reward': POOL_REWARD_UNITS / UNIT},
             'ranking': sorted([{'name': json.loads(u['state']).get('settings', {}).get('displayName', u['name']), 'power': active(json.loads(u['state'])),
                                 'mine': u['id'] == uid} for u in users], key=lambda u: -u['power']),
             'user': next(u['name'] for u in users if u['id'] == uid),
