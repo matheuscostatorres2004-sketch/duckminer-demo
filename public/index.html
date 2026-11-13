@@ -533,8 +533,8 @@ button:enabled:hover{filter:brightness(1.14)}
 <div class="room-panels"><div class="card pool-panel pool-dashboard">
   <h2 id="activePoolTitle">Pool DCK</h2>
   <dl class="pool-summary">
-    <div><dt>Meu poder ativo</dt><dd id="poolYourPower">0 TH/s</dd></div>
-    <div><dt>Poder da rede</dt><dd id="poolNetworkPower">0 TH/s</dd></div>
+    <div><dt>Meu poder ativo</dt><dd id="poolYourPower">0 GH/s</dd></div>
+    <div><dt>Poder da rede</dt><dd id="poolNetworkPower">0 GH/s</dd></div>
     <div><dt>Prêmio por rodada</dt><dd id="poolReward">0 DCK</dd></div>
     <div><dt>Minha recompensa estimada a cada 10 min</dt><dd id="poolEstimate">0 DCK</dd></div>
     <div class="pool-countdown"><dt>Próxima rodada</dt><dd id="poolCountdown">01:00</dd></div>
@@ -551,7 +551,7 @@ button:enabled:hover{filter:brightness(1.14)}
       <div class="split-summary"><div id="splitGauge" aria-hidden="true"></div><div><strong>Divisão de potência</strong><p id="poolSplitTotal" aria-live="polite"></p></div></div>
       <div class="pool-table-scroll"><table class="coop-table">
       <thead><tr><th>Pool</th><th>Moeda</th><th>Tipo</th><th>Potência (%)</th><th>Meu poder</th></tr></thead>
-      <tbody><tr><th scope="row">DCK - Coop</th><td>DCK</td><td>Coop</td><td><div class="split-step"><button type="button" aria-label="Diminuir DCK" onclick="stepPoolSplit('DCK',-1)">−</button><input aria-label="Percentual DCK" name="DCK" type="number" min="0" max="100" step="1" required><button type="button" aria-label="Aumentar DCK" onclick="stepPoolSplit('DCK',1)">+</button></div></td><td id="splitPowerDCK">0 TH/s</td></tr><tr><th scope="row">BTC - Coop</th><td>BTC</td><td>Coop</td><td><div class="split-step"><button type="button" aria-label="Diminuir BTC" onclick="stepPoolSplit('BTC',-1)">−</button><input aria-label="Percentual BTC" name="BTC" type="number" min="0" max="100" step="1" required><button type="button" aria-label="Aumentar BTC" onclick="stepPoolSplit('BTC',1)">+</button></div></td><td id="splitPowerBTC">0 TH/s</td></tr><tr><th scope="row">DOGE - Coop</th><td>DOGE</td><td>Coop</td><td><div class="split-step"><button type="button" aria-label="Diminuir DOGE" onclick="stepPoolSplit('DOGE',-1)">−</button><input aria-label="Percentual DOGE" name="DOGE" type="number" min="0" max="100" step="1" required><button type="button" aria-label="Aumentar DOGE" onclick="stepPoolSplit('DOGE',1)">+</button></div></td><td id="splitPowerDOGE">0 TH/s</td></tr></tbody></table></div>
+      <tbody><tr><th scope="row">DCK - Coop</th><td>DCK</td><td>Coop</td><td><div class="split-step"><button type="button" aria-label="Diminuir DCK" onclick="stepPoolSplit('DCK',-1)">−</button><input aria-label="Percentual DCK" name="DCK" type="number" min="0" max="100" step="1" required><button type="button" aria-label="Aumentar DCK" onclick="stepPoolSplit('DCK',1)">+</button></div></td><td id="splitPowerDCK">0 GH/s</td></tr><tr><th scope="row">BTC - Coop</th><td>BTC</td><td>Coop</td><td><div class="split-step"><button type="button" aria-label="Diminuir BTC" onclick="stepPoolSplit('BTC',-1)">−</button><input aria-label="Percentual BTC" name="BTC" type="number" min="0" max="100" step="1" required><button type="button" aria-label="Aumentar BTC" onclick="stepPoolSplit('BTC',1)">+</button></div></td><td id="splitPowerBTC">0 GH/s</td></tr><tr><th scope="row">DOGE - Coop</th><td>DOGE</td><td>Coop</td><td><div class="split-step"><button type="button" aria-label="Diminuir DOGE" onclick="stepPoolSplit('DOGE',-1)">−</button><input aria-label="Percentual DOGE" name="DOGE" type="number" min="0" max="100" step="1" required><button type="button" aria-label="Aumentar DOGE" onclick="stepPoolSplit('DOGE',1)">+</button></div></td><td id="splitPowerDOGE">0 GH/s</td></tr></tbody></table></div>
       <p id="poolSplitError" role="alert"></p>
       <div class="pool-actions"><button type="button" class="secondary" onclick="closePoolSplit()">Close</button><button id="savePoolPercentages" type="submit">Salvar percentuais</button></div>
     </form>
@@ -683,7 +683,7 @@ button:enabled:hover{filter:brightness(1.14)}
 
 
 
-<section hidden="" id="tab-charts"><div class="card"><h2>Gráficos de desempenho</h2><div class="stats"><div class="stat"><small>Total minerado</small><b id="total">0 DCK</b></div></div><p class="hint">Amostras a cada 15 segundos enquanto o jogo está aberto.</p><div class="grid"><div class="chartbox"><h3>Saldo DCK</h3><canvas id="chartBalance"></canvas></div><div class="chartbox"><h3>Poder TH/s</h3><canvas id="chartPower"></canvas></div><div class="chartbox"><h3>Total minerado</h3><canvas id="chartMined"></canvas></div></div><button onclick="recordMetrics();renderCharts()">Registrar agora</button></div></section>
+<section hidden="" id="tab-charts"><div class="card"><h2>Gráficos de desempenho</h2><div class="stats"><div class="stat"><small>Total minerado</small><b id="total">0 DCK</b></div></div><p class="hint">Amostras a cada 15 segundos enquanto o jogo está aberto.</p><div class="grid"><div class="chartbox"><h3>Saldo DCK</h3><canvas id="chartBalance"></canvas></div><div class="chartbox"><h3>Potência de mineração</h3><canvas id="chartPower"></canvas></div><div class="chartbox"><h3>Total minerado</h3><canvas id="chartMined"></canvas></div></div><button onclick="recordMetrics();renderCharts()">Registrar agora</button></div></section>
 
 
 
@@ -849,7 +849,7 @@ button:enabled:hover{filter:brightness(1.14)}
   <div class="profile-panels">
     <div class="profile-box"><h3>Atividade de mineração</h3>
       <dl class="profile-stats">
-        <div><dt>Poder ativo</dt><dd id="profilePower">0 TH/s</dd></div>
+        <div><dt>Poder ativo</dt><dd id="profilePower">0 GH/s</dd></div>
         <div><dt>Máquinas instaladas</dt><dd id="profileMachines">0</dd></div>
         <div><dt>Racks instalados</dt><dd id="profileRacks">0</dd></div>
         <div><dt>Total minerado</dt><dd id="profileMined">0 DCK</dd></div>
@@ -956,6 +956,15 @@ const MAX_BATTERY_SECONDS = 7 * BATTERY_SECONDS;
 const $=id=>document.getElementById(id),fmt=n=>Number(n||0).toLocaleString("pt-BR",{maximumFractionDigits:4}),lmt=n=>fmt(n)+" DCK";
 
 
+
+function formatPower(terahashes) {
+  const value = Number(terahashes) || 0;
+  const magnitude = Math.abs(value);
+  const [factor, unit] = magnitude >= 1e6 ? [1e6, "EH/s"]
+    : magnitude >= 1e3 ? [1e3, "PH/s"]
+    : magnitude >= 1 ? [1, "TH/s"] : [0.001, "GH/s"];
+  return (value / factor).toLocaleString("pt-BR", {maximumFractionDigits: 4}) + " " + unit;
+}
 
 function allMachines(){return game.racks.flat().filter(Boolean)}
 
@@ -1451,7 +1460,7 @@ function updatePoolSplitTotal() {
   $("savePoolPercentages").disabled = total > 100 || !form.checkValidity();
   for (const currency of coopCurrencies) {
     const percentage = Number(form.elements.namedItem(currency).value);
-    $("splitPower" + currency).textContent = fmt(power() * percentage / 100) + " TH/s";
+    $("splitPower" + currency).textContent = formatPower(power() * percentage / 100);
   }
   $("poolSplitTotal").textContent = total > 100
     ? total + "% alocado · limite de 100%"
@@ -1486,7 +1495,7 @@ function renderPoolEstimate(playerPower, networkPower, reward, powers) {
     return {currency,simulated,own,total,prize,estimate};
   });
   const markup = rows.map(({currency,simulated,own,total,prize,estimate}) =>
-    `<tr><th scope="row"><button type="button" aria-pressed="${currency === displayedPool}" onclick="chooseDisplayedPool('${currency}')">${currency} - Coop</button></th><td>${currency}</td><td>${simulated ? "Coop · Simulação" : "Coop"}</td><td>${fmt(own)} TH/s</td><td>${fmt(total)} TH/s</td><td>${formatReward(prize,currency)}</td><td>${formatReward(estimate,currency)}</td></tr>`
+    `<tr><th scope="row"><button type="button" aria-pressed="${currency === displayedPool}" onclick="chooseDisplayedPool('${currency}')">${currency} - Coop</button></th><td>${currency}</td><td>${simulated ? "Coop · Simulação" : "Coop"}</td><td>${formatPower(own)}</td><td>${formatPower(total)}</td><td>${formatReward(prize,currency)}</td><td>${formatReward(estimate,currency)}</td></tr>`
   ).join("");
   if ($("coopRows").dataset.rendered !== markup) {
     $("coopRows").innerHTML = markup;
@@ -1494,8 +1503,8 @@ function renderPoolEstimate(playerPower, networkPower, reward, powers) {
   }
   const selected = rows.find(row => row.currency === displayedPool);
   $("activePoolTitle").textContent = "Pool " + displayedPool + (selected.simulated ? " · Simulação" : "");
-  $("poolYourPower").textContent = fmt(selected.own) + " TH/s";
-  $("poolNetworkPower").textContent = fmt(selected.total) + " TH/s";
+  $("poolYourPower").textContent = formatPower(selected.own);
+  $("poolNetworkPower").textContent = formatPower(selected.total);
   $("poolReward").textContent = formatReward(selected.prize,displayedPool);
   $("poolEstimate").textContent = formatReward(selected.estimate,displayedPool);
 }
@@ -1522,7 +1531,7 @@ function renderPool(){
 
 
 
-  $("poolNetworkPower").textContent = fmt(networkPower) + " TH/s";
+  $("poolNetworkPower").textContent = formatPower(networkPower);
 
 
 
@@ -1540,7 +1549,7 @@ function renderPool(){
 
 
 
-  $("poolYourPower").textContent = fmt(playerPower) + " TH/s";
+  $("poolYourPower").textContent = formatPower(playerPower);
 
 
 
@@ -2001,7 +2010,7 @@ function renderMarket(){
 
       name:model.name, rarity:'Basic', kind:'miner',
 
-      details:`${fmt(model.power)} TH/s`,
+      details:`${formatPower(model.power)}`,
 
       price:model.cost, action:`buy(${index})`
 
@@ -2061,7 +2070,7 @@ function renderProfile(){
   $("profileAvatar").textContent = Array.from(displayName).slice(0,2).join("").toUpperCase();
   const rank = typeof rankingState === "undefined" ? -1 : rankingState.findIndex(player => player.mine);
   $("profileRank").textContent = rank < 0 ? "" : "Posição no ranking: " + (rank + 1);
-  $("profilePower").textContent = fmt(game.running ? power() : 0) + " TH/s";
+  $("profilePower").textContent = formatPower(game.running ? power() : 0);
   $("profileMachines").textContent = allMachines().length;
   $("profileRacks").textContent = game.racks.length;
   $("profileMined").textContent = lmt(game.total);
@@ -2118,7 +2127,7 @@ const inventoryCards = game.inventory.map(machine => marketCard({
   rarity: "Basic",
   kind: "miner",
   details: `Nível ${machine.level || 0} · ${fmt(machine.watts)} W`,
-  price: `${fmt(machine.power)} TH/s`,
+  price: `${formatPower(machine.power)}`,
   owned: true,
   action: `selectMachine(${machine.id})`,
   button: "Instalar na Sala"
@@ -2151,7 +2160,7 @@ if (selectedSlot) {
 
 
 
-    `<button onclick="installInSelectedSlot(${m.id})">${m.name} • ${m.power} TH/s</button>`
+    `<button onclick="installInSelectedSlot(${m.id})">${m.name} • ${formatPower(m.power)}</button>`
 
 
 
@@ -2171,7 +2180,7 @@ if (selectedSlot) {
       <h3>${installed.name}</h3>
       ${machinePhoto(installed.name)}
       <dl><dt>Categoria</dt><dd>${installed.rarity || "Basic"}</dd>
-      <dt>Poder de mineração</dt><dd>${fmt(installed.power)} TH/s</dd>
+      <dt>Poder de mineração</dt><dd>${formatPower(installed.power)}</dd>
       <dt>Nível</dt><dd>${installed.level || 0}</dd>
       <dt>Local</dt><dd>Rack ${(game.rackPositions?.[r] ?? r)+1}, espaço ${s+1}</dd></dl>
       <button type="button" class="danger" onclick="removeSelectedMachine()">Retirar e devolver ao estoque</button>
@@ -2214,11 +2223,11 @@ if (selectedSlot) {
 
 
 
-$("upgradeList").innerHTML=allMachines().length?allMachines().map(m=>`<div class="inventory-item"><span><b>${m.name}</b><small class="muted">Nível ${m.level||0} • ${m.power} TH/s • ${m.watts} W</small></span><button onclick="upgrade(${m.id})">Melhorar (${lmt(Math.round((m.baseCost||m.cost)*(.55+(m.level||0)*.45)))})</button></div>`).join(""):"Instale máquinas para melhorá-las.";
+$("upgradeList").innerHTML=allMachines().length?allMachines().map(m=>`<div class="inventory-item"><span><b>${m.name}</b><small class="muted">Nível ${m.level||0} • ${formatPower(m.power)} • ${m.watts} W</small></span><button onclick="upgrade(${m.id})">Melhorar (${lmt(Math.round((m.baseCost||m.cost)*(.55+(m.level||0)*.45)))})</button></div>`).join(""):"Instale máquinas para melhorá-las.";
 
 
 
-let defs=[["Primeira máquina",allMachines().length>=1,300],["Pequena fazenda",allMachines().length>=4,800],["Poder de 1.000 TH/s",power()>=1000,700],["Poder de 5.000 TH/s",power()>=5000,1800],["Primeiros 100 DCK minerados",game.total>=100,500],["10 horas online",game.seconds>=36000,1200],["Sala expandida",game.racks.length>3,1000]];
+let defs=[["Primeira máquina",allMachines().length>=1,300],["Pequena fazenda",allMachines().length>=4,800],["Poder de 1 PH/s",power()>=1000,700],["Poder de 5 PH/s",power()>=5000,1800],["Primeiros 100 DCK minerados",game.total>=100,500],["10 horas online",game.seconds>=36000,1200],["Sala expandida",game.racks.length>3,1000]];
 
 
 
@@ -2311,7 +2320,7 @@ function renderBattery(){$("clearBattery").disabled = game.batterySeconds <= 0;c
 
 
 
-function renderRanking(){let list=[...rivals.map((r,i)=>({name:r.name,power:Math.round(r.power*(1+Math.floor(game.seconds/120)*.015)),mine:false})),{name:"Minha Empresa",power:power(),mine:true}].sort((a,b)=>b.power-a.power);$("rankingList").innerHTML=list.map((r,i)=>`<div class="inventory-item"><b>#${i+1} ${r.mine?"":""}${r.name}</b><span>${fmt(r.power)} TH/s ${r.mine?"• VOCÊ":""}</span></div>`).join("");}
+function renderRanking(){let list=[...rivals.map((r,i)=>({name:r.name,power:Math.round(r.power*(1+Math.floor(game.seconds/120)*.015)),mine:false})),{name:"Minha Empresa",power:power(),mine:true}].sort((a,b)=>b.power-a.power);$("rankingList").innerHTML=list.map((r,i)=>`<div class="inventory-item"><b>#${i+1} ${r.mine?"":""}${r.name}</b><span>${formatPower(r.power)} ${r.mine?"• VOCÊ":""}</span></div>`).join("");}
 
 
 
@@ -2351,7 +2360,7 @@ function claimDaily(){if(game.dailyLast===localDay())return alert('Já resgatou 
 
 
 
-function openCrate(premium){let cost=premium?2000:250;if(game.balance<cost)return alert('Saldo insuficiente.');let weights=premium?[30,45,20,5]:[75,20,4,1],roll=Math.random()*100,idx=0;while(idx<3&&roll>=weights[idx]){roll-=weights[idx];idx++}let rarity=['Comum','Rara','Épica','Lendária'][idx],pool=idx===3?[legendaryModels[2]]:idx===2?[legendaryModels[1]]:idx===1?[models[2],models[3],legendaryModels[0]]:models;let base=pool[Math.floor(Math.random()*pool.length)],m={...base,id:Date.now()+Math.random(),rarity,level:0,baseCost:base.cost};game.balance-=cost;game.inventory.push(m);game.crateCount++;countMission("crate");$("crateResult").textContent=`${m.name} — ${rarity} — ${fmt(m.power)} TH/s. Enviada ao estoque!`;addEvent('Caixa: '+m.name+' ('+rarity+')');render();save();showPurchase(premium ? "Caixa Premium" : "Caixa Básica", cost)}
+function openCrate(premium){let cost=premium?2000:250;if(game.balance<cost)return alert('Saldo insuficiente.');let weights=premium?[30,45,20,5]:[75,20,4,1],roll=Math.random()*100,idx=0;while(idx<3&&roll>=weights[idx]){roll-=weights[idx];idx++}let rarity=['Comum','Rara','Épica','Lendária'][idx],pool=idx===3?[legendaryModels[2]]:idx===2?[legendaryModels[1]]:idx===1?[models[2],models[3],legendaryModels[0]]:models;let base=pool[Math.floor(Math.random()*pool.length)],m={...base,id:Date.now()+Math.random(),rarity,level:0,baseCost:base.cost};game.balance-=cost;game.inventory.push(m);game.crateCount++;countMission("crate");$("crateResult").textContent=`${m.name} — ${rarity} — ${formatPower(m.power)}. Enviada ao estoque!`;addEvent('Caixa: '+m.name+' ('+rarity+')');render();save();showPurchase(premium ? "Caixa Premium" : "Caixa Básica", cost)}
 
 
 

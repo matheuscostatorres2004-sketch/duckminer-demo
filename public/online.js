@@ -153,11 +153,11 @@ renderExchangeHistory = () => {};
 
 renderPool = () => {
   const own = game.running ? power() : 0;
-  $('poolNetworkPower').textContent = fmt(poolState.power) + ' TH/s';
+  $('poolNetworkPower').textContent = formatPower(poolState.power);
   $('poolReward').textContent = lmt(poolState.reward);
   renderPoolEstimate(own, poolState.power, poolState.reward, poolState.powers);
   renderPoolCountdown(poolState.duration ?? POOL_SECONDS, poolState.elapsed);
-  $('poolYourPower').textContent = fmt(own) + ' TH/s';
+  $('poolYourPower').textContent = formatPower(own);
 };
 
 renderRanking = () => {
@@ -165,7 +165,7 @@ renderRanking = () => {
     const element = document.createElement('div');
     element.className = 'inventory-item';
     element.textContent = '#' + (index + 1) + ' ' + player.name
-      + ' · ' + fmt(player.power) + ' TH/s' + (player.mine ? ' · VOCÊ' : '');
+      + ' · ' + formatPower(player.power) + (player.mine ? ' · VOCÊ' : '');
     return element;
   });
   $('rankingList').replaceChildren(...entries);
@@ -270,11 +270,11 @@ async function loadAdmin(offset = adminOffset) {
         const dialog = $('adminPlayerDialog');
         const tabs = [...dialog.querySelectorAll('[data-player-view]')];
         const machineLabel = machine => machine
-          ? machine.name + ' · ' + fmt(machine.power) + ' TH/s'
+          ? machine.name + ' · ' + formatPower(machine.power)
           : 'Espaço vazio';
         const views = {
           room: [
-            ['Poder instalado', fmt(player.power) + ' TH/s'],
+            ['Poder instalado', formatPower(player.power)],
             ...(player.roomMachines || []).map((rack, index) => [
               'Rack ' + ((player.rackPositions?.[index] ?? index) + 1),
               rack.map((machine, slot) => (slot + 1) + '. ' + machineLabel(machine))
