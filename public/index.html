@@ -632,7 +632,7 @@ button:enabled:hover{filter:brightness(1.14)}
 
 </section>
 
-<section hidden id="tab-inventory"><div class="card"><h2>Estoque</h2><h3>Racks</h3><p id="rackStock"></p><button type="button" onclick="showTab('room')">Ir à Sala para instalar</button><h3>Máquinas</h3><div id="inventory"></div></div></section>
+<section hidden id="tab-inventory"><div class="card"><h2>Estoque</h2><h3>Racks</h3><p id="rackStock"></p><button type="button" onclick="showTab('room')">Ir à Sala para instalar</button><h3>Máquinas</h3><div id="inventory" class="market-grid"></div></div></section>
 
 
 
@@ -1804,9 +1804,11 @@ function attachMachinePhotos(root) {
   }
 }
 
+let renderedInventoryCards;
+
 function marketCard(product){
 
-  const {name,rarity,kind,details,price,action,button,disabled} = product;
+  const {name,rarity,kind,details,price,action,button,disabled,owned=false} = product;
 
   return `<article class="market-product" data-kind="${kind}" data-tier="${rarity}">
 
@@ -1818,7 +1820,7 @@ function marketCard(product){
 
     <details class="market-details"><summary>Informações</summary><p>${details}</p></details>
 
-    <div class="market-buy"><div><span>Preço</span><strong>${lmt(price)}</strong></div>
+    <div class="market-buy"><div><span>${owned ? "Potência" : "Preço"}</span><strong>${owned ? price : lmt(price)}</strong></div>
 
     <button type="button" onclick="${action}" ${disabled ? 'disabled' : ''}>${button || 'Comprar'}</button></div>
 
@@ -1966,7 +1968,21 @@ renderMarket();
 
 
 
-$("inventory").innerHTML=game.inventory.length?game.inventory.map(m=>`<div class="inventory-item" draggable="true" ondragstart="dragInventory(event,${m.id})"><span><b>${m.name}</b><small class="muted">${m.power} TH/s • ${m.watts} W • Nv.${m.level||0}</small></span><span class="row"><button onclick="selectMachine(${m.id})">Selecionar / instalar</button></span></div>`).join(""):"Nenhuma máquina no estoque.";
+const inventoryCards = game.inventory.map(machine => marketCard({
+  name: machine.name,
+  rarity: "Basic",
+  kind: "miner",
+  details: `Nível ${machine.level || 0} · ${fmt(machine.watts)} W`,
+  price: `${fmt(machine.power)} TH/s`,
+  owned: true,
+  action: `selectMachine(${machine.id})`,
+  button: "Instalar na Sala"
+})).join("") || '<p class="muted">Nenhuma máquina no estoque.</p>';
+if (inventoryCards !== renderedInventoryCards) {
+  $("inventory").innerHTML = inventoryCards;
+  attachMachinePhotos($("inventory"));
+  renderedInventoryCards = inventoryCards;
+}
 
 
 
