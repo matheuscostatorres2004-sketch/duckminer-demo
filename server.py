@@ -229,12 +229,15 @@ def act(s, data):
         cfg = btc.config()
         if not cfg['enabled']:
             raise ValueError('Conversão BTC indisponível.')
-        sats = btc.amount(data.get('amount'))
+        credit = data.get('dckUnits')
+        if type(credit) is not int or not 0 < credit <= 1000000 * UNIT or data.get('rate') != cfg['rate']:
+            raise ValueError('Quantidade ou cotação inválida.')
+        numerator, denominator = Decimal(cfg['rate']).as_integer_ratio()
+        needed = credit * btc.SATOSHIS * denominator
+        divisor = UNIT * numerator
+        sats = (needed + divisor - 1) // divisor
         if sats > s.get('btcDepositedSats', 0):
             raise ValueError('Saldo BTC depositado insuficiente.')
-        credit = int(Decimal(sats) * Decimal(cfg['rate']) * UNIT / btc.SATOSHIS)
-        if not 0 < credit <= 1000000 * UNIT:
-            raise ValueError('Conversão fora do limite.')
         s['btcDepositedSats'] -= sats
         s['coins'] += credit
         message = f'Conversão concluída: +{credit / UNIT:.6f} DCK.'

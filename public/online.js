@@ -110,6 +110,8 @@ function receive(result) {
   render();
   renderExchangeHistory();
   renderDeposits(result.depositConfig, result.deposits || []);
+  conversionConfig = result.btcConfig;
+  updateDckQuote();
   renderBitcoin(result.btcConfig, result.btcDeposits || []);
 }
 
@@ -426,9 +428,32 @@ function removeRack(position) {
   }
 }
 
+let conversionConfig;
+const dckAmount = $('btcBalanceAmount');
+function updateDckQuote() {
+  const rate = Number(conversionConfig?.rate);
+  const target = Math.round(Number(dckAmount.value) * 1e6);
+  const sats = rate && target > 0 ? Math.ceil(target * 100 / rate) : 0;
+  const balance = game.btcDepositedSats || 0;
+  $('convertDckBalance').textContent = lmt(game.balance);
+  $('convertBtcQuote').textContent = sats ? (sats / 1e8).toLocaleString('pt-BR', {maximumFractionDigits:8}) + ' BTC' : '—';
+  $('convertDckStatus').textContent = !conversionConfig?.enabled ? 'Conversão indisponível.' :
+    sats > balance ? 'Saldo de BTC depositado insuficiente.' : '';
+  $('convertDckSubmit').disabled = !conversionConfig?.enabled || !sats || sats > balance || !dckAmount.validity.valid || supportTarget !== null;
+}
+dckAmount.addEventListener('input', updateDckQuote);
+$('convertMax').onclick = () => {
+  dckAmount.value = Math.min(1e6, Math.floor((game.btcDepositedSats || 0) * Number(conversionConfig?.rate || 0) / 100) / 1e6);
+  updateDckQuote();
+};
+for (const button of $('btcBalanceForm').querySelectorAll('[data-dck]')) {
+  button.onclick = () => { dckAmount.value = button.dataset.dck; updateDckQuote(); };
+}
 $('btcBalanceForm').addEventListener('submit', async event => {
   event.preventDefault();
-  if (supportTarget !== null) return;
-  const input = $('btcBalanceAmount');
-  if (await serverAction('convert_btc_balance', {amount: input.value})) input.value = '';
+  if ($('convertDckSubmit').disabled) return;
+  if (await serverAction('convert_btc_balance', {
+    dckUnits: Math.round(Number(dckAmount.value) * 1e6), rate: conversionConfig.rate
+  })) dckAmount.value = '';
+  updateDckQuote();
 });

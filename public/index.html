@@ -400,6 +400,12 @@ button:enabled:hover{filter:brightness(1.14)}
 @media (max-width:360px) {
   .mining-room-floor .racks { grid-template-columns:minmax(0,1fr); }
 }
+</style><style>
+.dck-convert{max-width:460px;display:grid;gap:12px;margin:14px 0 28px}
+.dck-convert .wallet-amount-field{display:flex;align-items:center;gap:8px}
+.dck-convert input{flex:1;min-width:0}
+.dck-convert .wallet-quote-box{padding:12px;display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px}
+.dck-presets{justify-content:center}
 </style></head>
 
 
@@ -783,10 +789,14 @@ Depositado e disponível para conversão: <span id="btcDeposited">0 BTC</span></
       <div id="walletPanelConvert"><div class="card">
 
 <h2>Converter saldo BTC em DCK</h2>
-<form id="btcBalanceForm">
-<label for="btcBalanceAmount">Quantidade de BTC depositado</label>
-<input id="btcBalanceAmount" type="number" min="0.00000001" step="0.00000001" required>
-<button type="submit">Converter saldo</button>
+<form id="btcBalanceForm" class="dck-convert">
+<p class="wallet-rate">Saldo disponível: <strong id="convertDckBalance">0 DCK</strong></p>
+<label for="btcBalanceAmount">Quantidade a receber</label>
+<div class="wallet-amount-field"><span>DCK</span><input id="btcBalanceAmount" type="number" min="0.000001" max="1000000" step="0.000001" placeholder="0" required><button type="button" id="convertMax">Máx.</button></div>
+<div class="row dck-presets"><button type="button" data-dck="10">10</button><button type="button" data-dck="25">25</button><button type="button" data-dck="50">50</button><button type="button" data-dck="100">100</button></div>
+<div class="wallet-quote-box">Pagar com BTC depositado <strong id="convertBtcQuote">—</strong></div>
+<p id="convertDckStatus" role="status"></p>
+<button id="convertDckSubmit" type="submit" disabled>Converter em DCK</button>
 </form>
 <h2>Solicitar depósito BTC</h2><p class="wallet-rate">1 DCK = US$ 1</p><p class="hint">Referência para compra de créditos do jogo.</p>
 
