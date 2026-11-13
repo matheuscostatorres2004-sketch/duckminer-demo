@@ -2110,13 +2110,15 @@ $("online").textContent=new Date(game.seconds*1000).toISOString().slice(11,19);
 
 
 const positions = game.rackPositions || game.racks.map((_, index) => index);
-$("racks").innerHTML=Array.from({length:MAX_RACKS},(_,position)=>{const r=positions.indexOf(position);const rack=game.racks[r];return rack ? `<div class="rack"><div class="rack-controls"><h3>RACK ${position+1}</h3><button type="button" class="danger" onclick="removeRack(${position})" aria-label="Remover rack ${position+1}">Remover</button></div><div class="rack-frame ${rack.length === 4 ? "rack-frame-photo" : ""}"><div class="slots">${rack.map((m,s)=>`<div class="slot ${m?"filled":""}" ondragover="allowDrop(event)" ondragleave="this.classList.remove('over')" ondrop="dropMachine(event,${r},${s})" onclick="clickSlot(${r},${s})">${m?`<div draggable="true" title="${m.name}" aria-label="${m.name}" ondragstart="dragRack(event,${r},${s})">${machinePhoto(m.name)}</div>`:`<span>＋ ESPAÇO VAZIO<small>Rack ${r+1} • Slot ${s+1}</small></span>`}</div>`).join("")}</div></div></div>` : `<button type="button" class="rack-position-empty" onclick="chooseRackPosition(${position})"><strong>+</strong><span>Lugar ${position+1}</span><small>${game.rackStock ? "Instalar rack" : "Comprar rack"}</small></button>`;}).join("");
-attachMachinePhotos($("racks"));
-for (const frame of $("racks").querySelectorAll(".rack-frame-photo")) {
-  frame.prepend($("rackPhotoTemplate").content.cloneNode(true));
+const rackMarkup = Array.from({length:MAX_RACKS},(_,position)=>{const r=positions.indexOf(position);const rack=game.racks[r];return rack ? `<div class="rack"><div class="rack-controls"><h3>RACK ${position+1}</h3><button type="button" class="danger" onclick="removeRack(${position})" aria-label="Remover rack ${position+1}">Remover</button></div><div class="rack-frame ${rack.length === 4 ? "rack-frame-photo" : ""}"><div class="slots">${rack.map((m,s)=>`<div class="slot ${m?"filled":""}" ondragover="allowDrop(event)" ondragleave="this.classList.remove('over')" ondrop="dropMachine(event,${r},${s})" onclick="clickSlot(${r},${s})">${m?`<div draggable="true" title="${m.name}" aria-label="${m.name}" ondragstart="dragRack(event,${r},${s})">${machinePhoto(m.name)}</div>`:`<span>＋ ESPAÇO VAZIO<small>Rack ${r+1} • Slot ${s+1}</small></span>`}</div>`).join("")}</div></div></div>` : `<button type="button" class="rack-position-empty" onclick="chooseRackPosition(${position})"><strong>+</strong><span>Lugar ${position+1}</span><small>${game.rackStock ? "Instalar rack" : "Comprar rack"}</small></button>`;}).join("");
+if ($("racks").dataset.markup !== rackMarkup) {
+  $("racks").innerHTML = rackMarkup;
+  $("racks").dataset.markup = rackMarkup;
+  attachMachinePhotos($("racks"));
+  for (const frame of $("racks").querySelectorAll(".rack-frame-photo")) {
+    frame.prepend($("rackPhotoTemplate").content.cloneNode(true));
+  }
 }
-
-
 
 renderMarket();
 

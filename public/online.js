@@ -2,6 +2,7 @@ let supportTarget = null;
 
 async function enterSupport(player) {
   if (requestBusy) return;
+  stateRefresh?.abort();
   requestBusy = true;
   supportTarget = player.id;
   try {
@@ -26,12 +27,13 @@ let poolState = {power: 0, elapsed: 0, duration: POOL_SECONDS, reward: POOL_REWA
 let rankingState = [];
 let authenticated = false;
 let requestBusy = false;
+let stateRefresh;
 let settingsDirty = false;
 let csrfToken = '';
 let authMode = 'login';
 
-async function api(path, data, key) {
-  const options = {credentials: 'same-origin', headers: {}};
+async function api(path, data, key, signal) {
+  const options = {credentials: 'same-origin', headers: {}, signal};
   if (supportTarget !== null) {
     if (path !== '/api/state' && path !== '/api/action') {
       throw new Error('Saia do modo de suporte para usar esta opção.');
@@ -106,6 +108,7 @@ function receive(result) {
 async function serverAction(action, fields = {}) {
   if (requestBusy || !authenticated) return;
   if (supportTarget !== null && !confirm('Confirmar esta ação na conta atendida?')) return;
+  stateRefresh?.abort();
   requestBusy = true;
   try {
     const result = await api('/api/action', {action, ...fields}, crypto.randomUUID());
@@ -174,6 +177,7 @@ renderRanking = () => {
 $('accountForm').addEventListener('submit', async event => {
   event.preventDefault();
   if (requestBusy) return;
+  stateRefresh?.abort();
   requestBusy = true;
   $('authMessage').textContent = 'Conectando…';
   try {
@@ -214,6 +218,7 @@ $('linkEmailForm').addEventListener('submit', async event => {
     $('linkEmailMessage').textContent = 'Aguarde a atualização e tente novamente.';
     return;
   }
+  stateRefresh?.abort();
   requestBusy = true;
   try {
     const result = await api('/api/account/email', {email:$('linkEmail').value, password:$('linkPassword').value});
@@ -363,15 +368,19 @@ $('logoutButton').addEventListener('click', async () => {
 });
 window.addEventListener('resize', renderCharts);
 setInterval(async () => {
-  if (!authenticated || requestBusy) return;
-  requestBusy = true;
+  if (!authenticated || requestBusy || stateRefresh || document.hidden) return;
+  const refresh = new AbortController();
+  stateRefresh = refresh;
   try {
-    receive(await api('/api/state'));
-    $('connectionStatus').textContent = 'Conectado · pool compartilhada';
-  } catch (error) { $('connectionStatus').textContent = error.message; }
-  finally { requestBusy = false; }
-}, 2000);
-setInterval(() => { if (authenticated) { recordMetrics(); renderCharts(); } }, 15000);
+    const result = await api('/api/state', undefined, undefined, refresh.signal);
+    if (!refresh.signal.aborted) receive(result);
+  } catch (error) {
+    if (!refresh.signal.aborted) $('connectionStatus').textContent = error.message;
+  } finally {
+    stateRefresh = undefined;
+  }
+}, 8000);
+setInterval(() => { if (authenticated) { recordMetrics(); if (!$("tab-charts").hidden) renderCharts(); } }, 15000);
 function startOnline(){
 showLogin();
 if (location.protocol === 'file:') {
