@@ -940,6 +940,10 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def worker(stop):
+    # API requests settle all elapsed rounds before reading or changing state.
+    # Avoid competing for the PostgreSQL write lock once per second.
+    if os.environ.get("DATABASE_URL"):
+        return
     while not stop.wait(1):
         try:
             with connect() as db:

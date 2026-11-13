@@ -59,6 +59,7 @@ async function api(path, data, key, signal) {
 }
 
 function showLogin() {
+  $("sessionLoading").hidden = true;
   authenticated = false;
   document.body.classList.add("auth-screen");
   $('accountGate').hidden = false;
@@ -94,6 +95,7 @@ function receive(result) {
     $('settingsName').value = settings.displayName;
     $('settingsZoom').value = String(settings.zoom);
   }
+  $("sessionLoading").hidden = true;
   $('accountGate').hidden = true;
   document.querySelector('main').hidden = false;
   document.querySelector('header').hidden = false;
@@ -111,6 +113,12 @@ async function serverAction(action, fields = {}) {
   stateRefresh?.abort();
   requestBusy = true;
   try {
+    if (action === 'buy' || action === 'install') {
+      clearTimeout(purchaseNoticeTimer);
+      const pending = action === 'buy' ? 'Processando compra…' : 'Instalando máquina…';
+      $('purchaseNotice').textContent = pending;
+      $('connectionStatus').textContent = pending;
+    }
     const result = await api('/api/action', {action, ...fields}, crypto.randomUUID());
     if (action === 'settings') settingsDirty = false;
     if (action === 'install' || action === 'remove') selectedSlot = selectedId = null;
@@ -125,6 +133,8 @@ async function serverAction(action, fields = {}) {
     return true;
   } catch (error) {
     $('connectionStatus').textContent = error.message;
+    $('purchaseNotice').textContent = error.message;
+    purchaseNoticeTimer = setTimeout(() => $('purchaseNotice').textContent = '', 4500);
   } finally {
     requestBusy = false;
   }
@@ -382,12 +392,13 @@ setInterval(async () => {
 }, 8000);
 setInterval(() => { if (authenticated) { recordMetrics(); if (!$("tab-charts").hidden) renderCharts(); } }, 15000);
 function startOnline(){
-showLogin();
 if (location.protocol === 'file:') {
+  showLogin();
   $('authMessage').textContent = 'Para abrir esta versão, extraia a pasta inteira e execute iniciar.bat. O jogo abrirá pelo servidor no navegador.';
   $('accountForm').hidden = true;
 } else {
   api('/api/state').then(receive).catch(error => {
+    showLogin();
     $('authMessage').textContent = error instanceof TypeError
       ? 'Sem conexão com o servidor. Execute iniciar.bat e mantenha a janela aberta.'
       : error.message;
