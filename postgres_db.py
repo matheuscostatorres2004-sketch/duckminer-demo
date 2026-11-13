@@ -1,6 +1,7 @@
 
 """PostgreSQL implementation of the database operations used by DuckMiner."""
 import re
+from types import SimpleNamespace
 
 
 class Row(dict):
@@ -41,8 +42,7 @@ class Database:
                    'DO UPDATE SET start=EXCLUDED.start, count=EXCLUDED.count')
         if sql.startswith('INSERT INTO users('):
             cursor = self.connection.execute(sql.replace('?', '%s') + ' RETURNING id', args)
-            cursor.lastrowid = cursor.fetchone()[0]
-            return cursor
+            return SimpleNamespace(lastrowid=cursor.fetchone()[0])
         sql = re.sub(r'\b(?:btc_deposits\.|deposits\.)?rowid\b',
                      lambda m: m[0].replace('rowid', 'id'), sql)
         if sql.lstrip().startswith('CREATE TABLE'):
