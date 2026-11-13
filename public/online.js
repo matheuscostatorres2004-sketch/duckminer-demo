@@ -1,3 +1,27 @@
+let supportTarget = null;
+
+async function enterSupport(player) {
+  if (requestBusy) return;
+  requestBusy = true;
+  supportTarget = player.id;
+  try {
+    receive(await api('/api/state'));
+    selectedSlot = selectedId = null;
+    $('supportLabel').textContent = 'Modo de suporte · @' + player.name;
+    $('supportBanner').hidden = false;
+    showTab('room');
+  } catch (error) {
+    supportTarget = null;
+    $('adminMessage').textContent = error.message;
+  } finally {
+    requestBusy = false;
+  }
+}
+
+function leaveSupport() {
+  if (!requestBusy) location.reload();
+}
+
 let poolState = {power: 0, elapsed: 0, duration: POOL_SECONDS, reward: POOL_REWARD};
 let rankingState = [];
 let authenticated = false;
@@ -8,6 +32,12 @@ let authMode = 'login';
 
 async function api(path, data, key) {
   const options = {credentials: 'same-origin', headers: {}};
+  if (supportTarget !== null) {
+    if (path !== '/api/state' && path !== '/api/action') {
+      throw new Error('Saia do modo de suporte para usar esta opção.');
+    }
+    options.headers['X-DuckMiner-Support'] = String(supportTarget);
+  }
   if (data !== undefined) {
     options.method = 'POST';
     options.headers['Content-Type'] = 'application/json';
@@ -75,6 +105,7 @@ function receive(result) {
 
 async function serverAction(action, fields = {}) {
   if (requestBusy || !authenticated) return;
+  if (supportTarget !== null && !confirm('Confirmar esta ação na conta atendida?')) return;
   requestBusy = true;
   try {
     const result = await api('/api/action', {action, ...fields}, crypto.randomUUID());
@@ -277,6 +308,13 @@ async function loadAdmin(offset = adminOffset) {
         $('adminPlayerDialog').showModal();
       };
       row.append(viewAccount);
+      if (!player.admin && !player.blocked) {
+        const supportButton = document.createElement('button');
+        supportButton.type = 'button';
+        supportButton.textContent = 'Entrar como jogador';
+        supportButton.onclick = () => enterSupport(player);
+        row.append(supportButton);
+      }
       if (!player.admin) {
         for (const [action, label] of [[player.blocked ? 'unblock' : 'block', player.blocked ? 'Desbloquear' : 'Bloquear'], ['revoke', 'Encerrar sessões']]) {
           const button = document.createElement('button');

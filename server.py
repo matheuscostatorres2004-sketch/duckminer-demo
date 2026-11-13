@@ -877,6 +877,25 @@ class Handler(BaseHTTPRequestHandler):
                 db.execute('DELETE FROM sessions WHERE token=?', (digest,))
                 db.commit()
                 return self.reply(200, {}, 'duck_session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0')
+            actor = uid
+            support = self.headers.get('X-DuckMiner-Support')
+            if support is not None:
+                if not admin_eligible(db, actor) or session['admin_until'] <= now:
+                    db.rollback()
+                    return self.reply(403, {'error': 'Desbloqueie a sessão administrativa.'})
+                if (path, self.command) not in (('/api/state', 'GET'), ('/api/action', 'POST')):
+                    raise ValueError('Operação indisponível no suporte.')
+                if not re.fullmatch(r'[0-9]{1,18}', support):
+                    raise ValueError('Conta inválida.')
+                uid = int(support)
+                target = db.execute('SELECT name FROM users WHERE id=? AND blocked=0', (uid,)).fetchone()
+                if not target or uid == actor:
+                    raise ValueError('Conta indisponível.')
+                if self.command == 'POST' and data.get('action') not in (
+                    'buy', 'install', 'remove', 'move', 'expand', 'install_rack', 'remove_rack',
+                    'pool_split', 'settings', 'cooling', 'upgrade', 'daily', 'claim', 'mission', 'crate'
+                ):
+                    raise ValueError('Ação indisponível no suporte.')
             if self.path == '/api/action' and self.command == 'POST':
                 key = self.headers.get('Idempotency-Key', '')
                 if not re.fullmatch(r'[a-zA-Z0-9-]{16,80}', key):
@@ -889,11 +908,16 @@ class Handler(BaseHTTPRequestHandler):
                 if not exists:
                     s = json.loads(db.execute('SELECT state FROM users WHERE id=?', (uid,)).fetchone()[0])
                     message = act(s, data)
+                    if support is not None:
+                        db.execute('CREATE TABLE IF NOT EXISTS support_audit (actor INTEGER, target INTEGER, action TEXT, created INTEGER, request_key TEXT)')
+                        db.execute('INSERT INTO support_audit VALUES(?,?,?,?,?)', (actor, uid, data['action'], now, key))
                     db.execute('UPDATE users SET state=? WHERE id=?', (json.dumps(s), uid))
                     db.execute('INSERT INTO requests(user_id,key,body_hash) VALUES(?,?,?)', (uid, key, body_hash))
             elif self.path != '/api/state' or self.command != 'GET':
                 raise ValueError('Pedido indisponível.')
             result = snapshot(db, uid)
+            if support is not None:
+                result.update(email=None, adminEligible=False, deposits=[], btcDeposits=[])
             result['message'] = message
             result['csrf'] = csrf
             db.commit()
