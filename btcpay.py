@@ -78,11 +78,17 @@ def production_base():
     from urllib.parse import urlsplit
     base = os.environ.get("BTCPAY_URL", "").rstrip("/")
     url = urlsplit(base)
-    if (os.environ.get("BTCPAY_AUTO_DEPOSITS") != "1" or not os.environ.get("DATABASE_URL")
-            or url.scheme != "https" or not url.hostname or url.username
-            or url.path or url.query or url.fragment or url.hostname.endswith(".demo.btcpayserver.org")
-            or not os.environ.get("BTCPAY_STORE_ID") or not os.environ.get("BTCPAY_API_KEY")):
-        raise ValueError("Depósito automático indisponível.")
+    if url.hostname and url.hostname.endswith(".demo.btcpayserver.org"):
+        raise ValueError("A instância de demonstração do BTCPay não aceita depósitos automáticos no DuckMiner.")
+    if os.environ.get("BTCPAY_AUTO_DEPOSITS") != "1":
+        raise ValueError("Configure BTCPAY_AUTO_DEPOSITS=1 no Render para ativar a integração de produção.")
+    if not os.environ.get("DATABASE_URL"):
+        raise ValueError("DATABASE_URL ausente no Render.")
+    if (url.scheme != "https" or not url.hostname or url.username
+            or url.path or url.query or url.fragment):
+        raise ValueError("BTCPAY_URL deve conter a URL base HTTPS da instância de produção.")
+    if not os.environ.get("BTCPAY_STORE_ID") or not os.environ.get("BTCPAY_API_KEY"):
+        raise ValueError("Confira BTCPAY_STORE_ID e BTCPAY_API_KEY no Render.")
     return base
 
 

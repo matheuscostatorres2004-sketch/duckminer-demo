@@ -933,6 +933,12 @@ class Handler(BaseHTTPRequestHandler):
             if path == '/api/btc' and self.command == 'POST':
                 if data.get('action') == 'create_btcpay':
                     try:
+                        try:
+                            btcpay.production_base()
+                        except ValueError as error:
+                            db.rollback()
+                            message = str(error) if str(error).startswith(("A instância", "Configure", "DATABASE_URL", "BTCPAY_URL", "Confira")) else "Confira BTCPAY_URL no Render."
+                            return self.reply(400, {'error': message})
                         result = btcpay.create_deposit(db, uid, data.get('amount'))
                     except OSError:
                         db.rollback()
