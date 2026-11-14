@@ -47,9 +47,29 @@ function btcInvoiceCard(invoice) {
   card.className = 'card';
   card.style.overflowWrap = 'anywhere';
   card.append(paragraph(new Date(invoice.created*1000).toLocaleString('pt-BR') + ' · ' + depositNames[invoice.status]),
-    paragraph((invoice.amount/100000000).toFixed(8) + ' BTC → ' + (invoice.credit/1000000).toLocaleString('pt-BR',{maximumFractionDigits:6}) + ' DCK'),
+    paragraph((invoice.amount/100000000).toFixed(8) + ' BTC'),
     paragraph('Cotação fixada: 1 BTC = US$ ' + invoice.rate));
-  if (invoice.address) card.append(paragraph('Endereço Bitcoin exclusivo deste pedido: '+invoice.address));
+  if (invoice.address && invoice.status === 'payment') {
+    const label = document.createElement('label');
+    label.textContent = 'Endereço Bitcoin deste depósito';
+    const address = document.createElement('input');
+    address.readOnly = true;
+    address.value = invoice.address;
+    label.append(address);
+    const copy = document.createElement('button');
+    copy.type = 'button';
+    copy.textContent = 'Copiar endereço';
+    copy.onclick = async () => {
+      try {
+        await navigator.clipboard.writeText(address.value);
+        copy.textContent = 'Endereço copiado';
+      } catch {
+        address.select();
+        copy.textContent = 'Endereço selecionado. Copie manualmente.';
+      }
+    };
+    card.append(label, copy);
+  }
   if (invoice.txid) card.append(paragraph('TXID: '+invoice.txid));
   if (invoice.approved_at) card.append(paragraph('Crédito aprovado em '+new Date(invoice.approved_at*1000).toLocaleString('pt-BR')));
   return card;
