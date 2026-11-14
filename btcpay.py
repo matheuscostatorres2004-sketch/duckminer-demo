@@ -1,5 +1,6 @@
 import json
 import os
+import re
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote
 from urllib.request import build_opener, HTTPRedirectHandler, Request
@@ -36,7 +37,26 @@ def preview_invoice(amount):
             403: "Confira a permissão Create an invoice para a loja DuckMiner.",
             404: "Confira se a URL e o Store ID pertencem à mesma instância.",
         }
-        return {"message": f"BTCPay HTTP {error.code}. " + hints.get(error.code, "Confira o painel da loja e tente novamente.")}
+        detail = ""
+        if error.code in (400, 422):
+            try:
+                body = json.loads(error.read(8192))
+                entries = body if isinstance(body, list) else [body]
+                parts = []
+                for entry in entries[:4]:
+                    if not isinstance(entry, dict):
+                        continue
+                    field = entry.get("path") or entry.get("field")
+                    code = entry.get("code")
+                    for value in (field, code):
+                        if isinstance(value, str) and re.fullmatch(r"[A-Za-z][A-Za-z0-9_.-]{0,63}", value):
+                            if not any(secret and secret in value for secret in (key, store)):
+                                parts.append(value)
+                if parts:
+                    detail = " Campos ou códigos da resposta: " + ", ".join(dict.fromkeys(parts)) + "."
+            except (ValueError, OSError):
+                pass
+        return {"message": f"BTCPay HTTP {error.code}. " + hints.get(error.code, "Confira o painel da loja e tente novamente.") + detail}
     except (URLError, OSError):
         return {"message": "Sem resposta do BTCPay. Confira se a instância está disponível."}
     except (ValueError, AttributeError):
