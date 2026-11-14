@@ -670,7 +670,28 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def btcpay_webhook(self):
+        if self.headers.get('Transfer-Encoding') or self.headers.get('Content-Type', '').split(';')[0].strip().lower() != 'application/json':
+            return self.reply(400, {'error': 'Formato inválido.'})
+        length = self.headers.get('Content-Length', '')
+        if not re.fullmatch(r'[0-9]{1,5}', length) or not 0 < int(length) <= 65536:
+            return self.reply(400, {'error': 'Tamanho inválido.'})
+        body = self.rfile.read(int(length))
+        if not btcpay.verify_webhook(body, self.headers.get('BTCPay-Sig', '')):
+            return self.reply(403, {'error': 'Assinatura inválida.'})
+        try:
+            event = json.loads(body)
+        except (ValueError, UnicodeError):
+            return self.reply(400, {'error': 'Evento inválido.'})
+        store = os.environ.get('BTCPAY_STORE_ID')
+        if not isinstance(event, dict) or not store or event.get('storeId') != store:
+            return self.reply(403, {'error': 'Loja inválida.'})
+        # Demo invoices have no player association and never affect balances.
+        return self.reply(200, {'received': True, 'credited': False})
+
     def do_POST(self):
+        if self.path == '/api/btcpay/webhook':
+            return self.btcpay_webhook()
         origin = self.headers.get('Origin')
         host = self.headers.get('Host', '')
         try:

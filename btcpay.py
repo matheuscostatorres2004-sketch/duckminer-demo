@@ -62,3 +62,14 @@ def preview_invoice(amount):
     except (ValueError, AttributeError):
         return {"message": "O BTCPay retornou uma resposta inesperada. Confira Invoices antes de repetir."}
     return {"message": "Cobrança de demonstração criada. Confira em Invoices no BTCPay. Não envie BTC."}
+
+
+def verify_webhook(body, signature):
+    import hashlib
+    import hmac
+
+    secret = os.environ.get("BTCPAY_WEBHOOK_SECRET", "")
+    if len(secret) < 32 or not re.fullmatch(r"sha256=[0-9a-f]{64}", signature):
+        return False
+    expected = "sha256=" + hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
+    return hmac.compare_digest(expected, signature)
