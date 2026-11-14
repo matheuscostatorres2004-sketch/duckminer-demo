@@ -145,3 +145,21 @@ async function loadBtcAdmin(offset=btcAdminOffset) {
 $('btcAdminRefresh').addEventListener('click',()=>loadBtcAdmin(0));
 $('btcAdminPrevious').addEventListener('click',()=>loadBtcAdmin(Math.max(0,btcAdminOffset-50)));
 $('btcAdminNext').addEventListener('click',()=>loadBtcAdmin(btcAdminOffset+50));
+
+const demoInvoice = document.createElement('button');
+demoInvoice.type = 'button';
+demoInvoice.textContent = 'Conferir conexão BTCPay (admin)';
+$('btcConversionForm').after(demoInvoice);
+demoInvoice.onclick = async () => {
+  const amount = $('btcConversionAmount');
+  if (!amount.reportValidity()) return;
+  demoInvoice.disabled = true;
+  try {
+    const result = await api('/api/btc', {action:'preview_btcpay', amount:amount.value});
+    $('btcConversionMessage').textContent = result.message;
+  } catch (error) {
+    $('btcConversionMessage').textContent = error.message;
+  } finally {
+    demoInvoice.disabled = false;
+  }
+};

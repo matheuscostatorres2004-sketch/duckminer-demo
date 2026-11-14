@@ -10,6 +10,7 @@ import random
 import re
 import secrets
 import sqlite3
+import btcpay
 from postgres_db import connect_postgres
 import threading
 import time
@@ -899,6 +900,13 @@ class Handler(BaseHTTPRequestHandler):
                 raise ValueError('Rota administrativa inválida.')
             message = None
             if path == '/api/btc' and self.command == 'POST':
+                if data.get('action') == 'preview_btcpay':
+                    if not admin_eligible(db, uid) or session['admin_until'] <= now:
+                        db.rollback()
+                        return self.reply(403, {'error': 'Desbloqueie o painel de administração primeiro.'})
+                    db.commit()
+                    result = btcpay.preview_invoice(data.get('amount'))
+                    return self.reply(200, result)
                 result = btc.action(db,uid,data,now)
                 db.commit()
                 return self.reply(200,result)
