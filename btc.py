@@ -164,3 +164,69 @@ def action(db, uid, data, now, administrative=False):
         raise ValueError('Ação indisponível.')
     db.execute('INSERT INTO admin_audit(at,actor,target,action) VALUES(?,?,?,?)',(now,uid,invoice['user_id'],'btc:'+name+':'+invoice['id']))
     return {'message':'Solicitação BTC atualizada.'}
+
+def personal_deposit(db, uid):
+    from base64 import b64encode
+    from urllib.parse import urlsplit
+    from urllib.request import Request, build_opener
+    from btcpay import NoRedirect
+
+    url = os.environ.get("BITCOIN_RPC_URL", "")
+    user = os.environ.get("BITCOIN_RPC_USER")
+    password = os.environ.get("BITCOIN_RPC_PASSWORD")
+    parsed = urlsplit(url)
+    if (os.environ.get("BTC_PERSONAL_DEPOSITS") != "1" or not os.environ.get("DATABASE_URL")
+            or parsed.scheme != "https" or not parsed.hostname or parsed.username
+            or not parsed.path.startswith("/wallet/") or not user or not password):
+        raise ValueError("Depósito por endereço ainda não configurado.")
+
+    authorization = b64encode(f"{user}:{password}".encode()).decode("ascii")
+    opener = build_opener(NoRedirect())
+
+    def rpc(method, *params):
+        request = Request(url, data=json.dumps(dict(jsonrpc="1.0", id="duckminer",
+                          method=method, params=params)).encode(),
+                          headers={"Authorization": "Basic " + authorization,
+                                   "Content-Type": "application/json"})
+        with opener.open(request, timeout=8) as response:
+            result = json.load(response, parse_float=Decimal)
+        if result.get("error"):
+            raise OSError("Bitcoin Core indisponível.")
+        return result["result"]
+
+    if rpc("getblockchaininfo")["chain"] != "main":
+        raise ValueError("A carteira precisa estar na rede Bitcoin principal.")
+    row = db.execute("SELECT address FROM btc_personal_addresses WHERE user_id=?", (uid,)).fetchone()
+    address = row["address"] if row else rpc("getnewaddress", f"duckminer:{uid}", "bech32")
+    if not address_valid(address):
+        raise ValueError("Endereço Bitcoin inválido.")
+    if not row:
+        db.execute("INSERT INTO btc_personal_addresses VALUES(?,?)", (uid, address))
+    transactions = rpc("listsinceblock")["transactions"]
+    pending = credited = 0
+    for payment in transactions:
+        if payment.get("address") != address or payment.get("category") != "receive":
+            continue
+        sats = int(Decimal(payment["amount"]) * SATOSHIS)
+        confirmations = payment["confirmations"]
+        if sats <= 0 or confirmations < 0:
+            continue
+        if confirmations < 6:
+            pending += sats
+            continue
+        txid, vout = payment["txid"], payment["vout"]
+        inserted = db.execute(
+            "INSERT INTO btc_personal_credits(txid,vout,user_id,sats) VALUES(?,?,?,?) "
+            "ON CONFLICT(txid,vout) DO NOTHING RETURNING txid", (txid,vout,uid,sats)
+        ).fetchone()
+        if inserted:
+            credited += sats
+    if credited:
+        state = json.loads(db.execute("SELECT state FROM users WHERE id=?", (uid,)).fetchone()[0])
+        state["btcDepositedSats"] = state.get("btcDepositedSats", 0) + credited
+        db.execute("UPDATE users SET state=? WHERE id=?", (json.dumps(state),uid))
+    import qrcode
+    from qrcode.image.svg import SvgPathFillImage
+    image = qrcode.make("bitcoin:" + address, image_factory=SvgPathFillImage)
+    return dict(address=address, pending=pending, credited=credited,
+                qr="data:image/svg+xml;base64," + b64encode(image.to_string()).decode("ascii"))

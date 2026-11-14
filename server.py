@@ -104,6 +104,8 @@ def initialize():
         if 'body_hash' not in columns:
             db.execute("ALTER TABLE requests ADD COLUMN body_hash TEXT NOT NULL DEFAULT ''")
         db.execute("CREATE TABLE IF NOT EXISTS btcpay_deposits (invoice_id TEXT PRIMARY KEY, user_id INTEGER NOT NULL, sats INTEGER NOT NULL, credited INTEGER NOT NULL DEFAULT 0)")
+        db.execute("CREATE TABLE IF NOT EXISTS btc_personal_addresses (user_id INTEGER PRIMARY KEY, address TEXT UNIQUE NOT NULL)")
+        db.execute("CREATE TABLE IF NOT EXISTS btc_personal_credits (txid TEXT, vout INTEGER, user_id INTEGER NOT NULL, sats INTEGER NOT NULL, PRIMARY KEY(txid,vout))")
         btc.initialize(db)
         now = int(time.time())
         db.execute('INSERT OR IGNORE INTO pool VALUES(1,?,?)', (now, now - now % POOL_SECONDS))
@@ -931,6 +933,17 @@ class Handler(BaseHTTPRequestHandler):
                 raise ValueError('Rota administrativa inválida.')
             message = None
             if path == '/api/btc' and self.command == 'POST':
+                if data.get('action') == 'personal_deposit':
+                    try:
+                        result = btc.personal_deposit(db, uid)
+                    except ValueError as error:
+                        db.rollback()
+                        return self.reply(400, {'error': str(error)})
+                    except OSError:
+                        db.rollback()
+                        return self.reply(502, {'error': 'Bitcoin Core indisponível.'})
+                    db.commit()
+                    return self.reply(200, result)
                 if data.get('action') == 'create_btcpay':
                     try:
                         try:

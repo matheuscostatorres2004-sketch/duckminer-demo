@@ -214,3 +214,51 @@ autoDeposit.onclick = async () => {
     autoDeposit.disabled = false;
   }
 };
+
+const personalBtc = document.createElement('section');
+const personalAddress = document.createElement('input');
+personalAddress.readOnly = true;
+personalAddress.setAttribute('aria-label', 'Meu endereço de depósito Bitcoin');
+const personalStatus = document.createElement('p');
+personalStatus.setAttribute('role', 'status');
+const personalQr = document.createElement('img');
+personalQr.alt = 'QR Code do meu endereço Bitcoin';
+personalQr.width = 180;
+const personalCopy = document.createElement('button');
+personalCopy.type = 'button';
+personalCopy.textContent = 'Copiar endereço';
+personalCopy.onclick = async () => {
+  try {
+    await navigator.clipboard.writeText(personalAddress.value);
+    personalStatus.textContent = 'Endereço copiado.';
+  } catch {
+    personalAddress.select();
+  }
+};
+const personalRefresh = document.createElement('button');
+personalRefresh.type = 'button';
+personalRefresh.textContent = 'Meu endereço BTC';
+for (const item of [personalAddress, personalCopy, personalQr]) item.hidden = true;
+personalBtc.append(personalRefresh, personalAddress, personalCopy, personalQr, personalStatus);
+$('btcConversionForm').before(personalBtc);
+personalRefresh.onclick = async () => {
+  if (requestBusy) return;
+  requestBusy = true;
+  personalRefresh.disabled = true;
+  try {
+    const deposit = await api('/api/btc', {action:'personal_deposit'});
+    personalAddress.value = deposit.address;
+    personalQr.src = deposit.qr;
+    for (const item of [personalAddress, personalCopy, personalQr]) item.hidden = false;
+    personalRefresh.textContent = 'Atualizar depósito';
+    if (deposit.credited) receive(await api('/api/state'));
+    personalStatus.textContent = deposit.pending
+      ? 'Aguardando 6 confirmações: ' + (deposit.pending / 1e8).toFixed(8) + ' BTC'
+      : 'Envie somente BTC pela rede Bitcoin. O saldo é atualizado após 6 confirmações.';
+  } catch (error) {
+    personalStatus.textContent = error.message;
+  } finally {
+    personalRefresh.disabled = false;
+    requestBusy = false;
+  }
+};
