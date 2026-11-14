@@ -70,6 +70,9 @@ function showLogin() {
 function receive(result) {
   const metrics = game.metrics || [];
   game = result.game;
+  for (const button of $('minedConvert').querySelectorAll('button')) {
+    button.disabled = supportTarget !== null || !(game.miningWallet?.[button.dataset.mined] > 0);
+  }
   const simulatedSats = (game.miningWallet?.BTC || 0) * 100;
   const depositedSats = game.btcDepositedSats || 0;
   const formatBtc = sats => (sats / 100000000).toLocaleString('pt-BR', {maximumFractionDigits:8}) + ' BTC';
@@ -457,3 +460,12 @@ $('btcBalanceForm').addEventListener('submit', async event => {
   })) dckAmount.value = '';
   updateDckQuote();
 });
+
+for (const button of $('minedConvert').querySelectorAll('button')) {
+  button.addEventListener('click', () => {
+    const currency = button.dataset.mined;
+    if (confirm('Converter todo o saldo minerado de ' + currency + ' em DCK?')) {
+      serverAction('convert_mined_balance', {currency});
+    }
+  });
+}

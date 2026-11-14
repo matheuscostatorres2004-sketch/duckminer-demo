@@ -227,7 +227,18 @@ def act(s, data):
     if name in ('daily', 'claim', 'mission', 'crate'):
         raise ValueError('Ação desativada.')
     message = 'Operação concluída.'
-    if name == 'convert_btc_balance':
+    if name == 'convert_mined_balance':
+        currency = data.get('currency')
+        if currency not in ('BTC', 'DOGE'):
+            raise ValueError('Moeda inválida.')
+        wallet = s.setdefault('miningWallet', {})
+        credit = wallet.get(currency, 0)
+        if credit <= 0:
+            raise ValueError('Saldo minerado insuficiente.')
+        wallet[currency] = 0
+        s['coins'] += credit
+        message = f'Conversão de mineração concluída: +{credit / UNIT:.6f} DCK.'
+    elif name == 'convert_btc_balance':
         cfg = btc.config()
         if not cfg['enabled']:
             raise ValueError('Conversão BTC indisponível.')
