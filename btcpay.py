@@ -1,5 +1,6 @@
 import json
 import os
+from urllib.error import HTTPError, URLError
 from urllib.parse import quote
 from urllib.request import build_opener, HTTPRedirectHandler, Request
 
@@ -28,6 +29,16 @@ def preview_invoice(amount):
             invoice = json.load(response)
         if not invoice.get("id") or invoice.get("currency") != "BTC":
             raise ValueError()
-    except (OSError, ValueError, AttributeError):
-        return {"message": "O BTCPay não confirmou a criação. Confira a chave e o ID da loja."}
+    except HTTPError as error:
+        hints = {
+            400: "O BTCPay recusou os dados da cobrança. Confira a configuração de Bitcoin on-chain na loja.",
+            401: "Confira se BTCPAY_API_KEY contém a chave válida, sem aspas nem prefixo token.",
+            403: "Confira a permissão Create an invoice para a loja DuckMiner.",
+            404: "Confira se a URL e o Store ID pertencem à mesma instância.",
+        }
+        return {"message": f"BTCPay HTTP {error.code}. " + hints.get(error.code, "Confira o painel da loja e tente novamente.")}
+    except (URLError, OSError):
+        return {"message": "Sem resposta do BTCPay. Confira se a instância está disponível."}
+    except (ValueError, AttributeError):
+        return {"message": "O BTCPay retornou uma resposta inesperada. Confira Invoices antes de repetir."}
     return {"message": "Cobrança de demonstração criada. Confira em Invoices no BTCPay. Não envie BTC."}
