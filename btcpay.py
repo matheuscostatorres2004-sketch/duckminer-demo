@@ -73,3 +73,65 @@ def verify_webhook(body, signature):
         return False
     expected = "sha256=" + hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
     return hmac.compare_digest(expected, signature)
+
+def production_base():
+    from urllib.parse import urlsplit
+    base = os.environ.get("BTCPAY_URL", "").rstrip("/")
+    url = urlsplit(base)
+    if (os.environ.get("BTCPAY_AUTO_DEPOSITS") != "1" or not os.environ.get("DATABASE_URL")
+            or url.scheme != "https" or not url.hostname or url.username
+            or url.path or url.query or url.fragment or url.hostname.endswith(".demo.btcpayserver.org")
+            or not os.environ.get("BTCPAY_STORE_ID") or not os.environ.get("BTCPAY_API_KEY")):
+        raise ValueError("Depósito automático indisponível.")
+    return base
+
+
+def invoice_api(suffix="", payload=None):
+    base = production_base()
+    store = quote(os.environ["BTCPAY_STORE_ID"], safe="")
+    req = Request(f"{base}/api/v1/stores/{store}/invoices{suffix}",
+                  data=json.dumps(payload).encode() if payload is not None else None,
+                  headers={"Authorization": "token " + os.environ["BTCPAY_API_KEY"],
+                           "Content-Type": "application/json"})
+    with build_opener(NoRedirect()).open(req, timeout=12) as response:
+        return json.load(response)
+
+
+def create_deposit(db, uid, amount):
+    sats = btc.amount(amount)
+    invoice = invoice_api(payload={"amount": f"{sats // btc.SATOSHIS}.{sats % btc.SATOSHIS:08d}",
+                                   "currency": "BTC", "checkout": {"paymentMethods": ["BTC-CHAIN"],
+                                   "speedPolicy": "LowSpeed", "paymentTolerance": 0}})
+    invoice_id = invoice["id"]
+    link = invoice["checkoutLink"]
+    if not link.startswith(production_base() + "/"):
+        raise ValueError("Link da cobrança inválido.")
+    db.execute("INSERT INTO btcpay_deposits(invoice_id,user_id,sats) VALUES(?,?,?)", (invoice_id, uid, sats))
+    return {"message": "Cobrança criada.", "checkoutLink": link}
+
+
+def credit_deposit(db, event):
+    from decimal import Decimal
+    invoice_id = event.get("invoiceId", "")
+    if not isinstance(invoice_id, str) or not re.fullmatch(r"[A-Za-z0-9]{1,100}", invoice_id):
+        return False
+    deposit = db.execute("SELECT * FROM btcpay_deposits WHERE invoice_id=?", (invoice_id,)).fetchone()
+    if not deposit or deposit["credited"]:
+        return False
+    path = "/" + invoice_id
+    invoice = invoice_api(path)
+    expected = Decimal(deposit["sats"]) / btc.SATOSHIS
+    if (invoice.get("id") != invoice_id or invoice.get("storeId") != event["storeId"]
+            or invoice.get("status") != "Settled" or invoice.get("additionalStatus") != "None"
+            or invoice.get("currency") != "BTC" or Decimal(str(invoice.get("amount"))) != expected):
+        return False
+    methods = invoice_api(path + "/payment-methods")
+    if not any(m.get("paymentMethodId") == "BTC-CHAIN" and m.get("currency") == "BTC"
+               and Decimal(str(m["totalPaid"])) == expected for m in methods):
+        return False
+    row = db.execute("SELECT state FROM users WHERE id=?", (deposit["user_id"],)).fetchone()
+    state = json.loads(row["state"])
+    state["btcDepositedSats"] = state.get("btcDepositedSats", 0) + deposit["sats"]
+    db.execute("UPDATE users SET state=? WHERE id=?", (json.dumps(state), deposit["user_id"]))
+    db.execute("UPDATE btcpay_deposits SET credited=1 WHERE invoice_id=?", (invoice_id,))
+    return True

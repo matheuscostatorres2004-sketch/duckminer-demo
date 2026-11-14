@@ -103,6 +103,7 @@ def initialize():
         columns = {row['name'] for row in db.execute('PRAGMA table_info(requests)')}
         if 'body_hash' not in columns:
             db.execute("ALTER TABLE requests ADD COLUMN body_hash TEXT NOT NULL DEFAULT ''")
+        db.execute("CREATE TABLE IF NOT EXISTS btcpay_deposits (invoice_id TEXT PRIMARY KEY, user_id INTEGER NOT NULL, sats INTEGER NOT NULL, credited INTEGER NOT NULL DEFAULT 0)")
         btc.initialize(db)
         now = int(time.time())
         db.execute('INSERT OR IGNORE INTO pool VALUES(1,?,?)', (now, now - now % POOL_SECONDS))
@@ -686,6 +687,15 @@ class Handler(BaseHTTPRequestHandler):
         store = os.environ.get('BTCPAY_STORE_ID')
         if not isinstance(event, dict) or not store or event.get('storeId') != store:
             return self.reply(403, {'error': 'Loja inválida.'})
+        if event.get("type") == "InvoiceSettled" and os.environ.get("BTCPAY_AUTO_DEPOSITS") == "1":
+            try:
+                btcpay.production_base()
+                with connect() as db:
+                    db.execute("BEGIN IMMEDIATE")
+                    credited = btcpay.credit_deposit(db, event)
+                return self.reply(200, {"received": True, "credited": credited})
+            except Exception:
+                return self.reply(503, {"error": "Confirmação indisponível."})
         # Demo invoices have no player association and never affect balances.
         return self.reply(200, {'received': True, 'credited': False})
 
@@ -921,6 +931,14 @@ class Handler(BaseHTTPRequestHandler):
                 raise ValueError('Rota administrativa inválida.')
             message = None
             if path == '/api/btc' and self.command == 'POST':
+                if data.get('action') == 'create_btcpay':
+                    try:
+                        result = btcpay.create_deposit(db, uid, data.get('amount'))
+                    except OSError:
+                        db.rollback()
+                        return self.reply(502, {'error': 'BTCPay indisponível.'})
+                    db.commit()
+                    return self.reply(200, result)
                 if data.get('action') == 'preview_btcpay':
                     if not admin_eligible(db, uid) or session['admin_until'] <= now:
                         db.rollback()

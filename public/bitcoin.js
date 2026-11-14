@@ -183,3 +183,24 @@ demoInvoice.onclick = async () => {
     demoInvoice.disabled = false;
   }
 };
+
+const autoDeposit = document.createElement('button');
+autoDeposit.type = 'button';
+autoDeposit.textContent = 'Gerar cobrança automática BTC';
+$('btcConversionForm').after(autoDeposit);
+autoDeposit.onclick = async () => {
+  const amount = $('btcConversionAmount');
+  if (!amount.value || !amount.reportValidity()) return;
+  autoDeposit.disabled = true;
+  try {
+    const result = await api('/api/btc', {action:'create_btcpay', amount:amount.value});
+    const link = document.createElement('a');
+    link.href = result.checkoutLink;
+    link.textContent = 'Abrir cobrança e copiar endereço Bitcoin';
+    $('btcConversionMessage').replaceChildren(link);
+  } catch (error) {
+    $('btcConversionMessage').textContent = error.message;
+  } finally {
+    autoDeposit.disabled = false;
+  }
+};
