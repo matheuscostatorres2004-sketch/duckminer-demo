@@ -83,7 +83,18 @@ def address_valid(address):
 
 
 def player_data(db, uid):
-    return [dict(row) for row in db.execute('SELECT * FROM btc_deposits WHERE user_id=? ORDER BY created DESC,rowid DESC LIMIT 50',(uid,))]
+    invoices = [dict(row) for row in db.execute('SELECT * FROM btc_deposits WHERE user_id=? ORDER BY created DESC,rowid DESC LIMIT 50',(uid,))]
+    for invoice in invoices:
+        if invoice['status'] == 'payment' and invoice['address']:
+            from base64 import b64encode
+            import qrcode
+            from qrcode.image.svg import SvgPathFillImage
+
+            amount = Decimal(invoice['amount']) / SATOSHIS
+            uri = f"bitcoin:{invoice['address']}?amount={amount:.8f}"
+            image = qrcode.make(uri, image_factory=SvgPathFillImage)
+            invoice['qr'] = 'data:image/svg+xml;base64,' + b64encode(image.to_string()).decode('ascii')
+    return invoices
 
 
 def history(db, uid, offset):

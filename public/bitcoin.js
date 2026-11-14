@@ -69,6 +69,16 @@ function btcInvoiceCard(invoice) {
       }
     };
     card.append(label, copy);
+    if (invoice.qr?.startsWith('data:image/svg+xml;base64,')) {
+      const qr = document.createElement('img');
+      qr.src = invoice.qr;
+      qr.alt = 'QR Code do endereço e valor deste depósito Bitcoin';
+      qr.width = 200;
+      qr.height = 200;
+      qr.style.cssText = 'display:block;max-width:100%;height:auto;margin:12px 0;background:white';
+      card.append(qr);
+    }
+
   }
   if (invoice.txid) card.append(paragraph('TXID: '+invoice.txid));
   if (invoice.approved_at) card.append(paragraph('Crédito aprovado em '+new Date(invoice.approved_at*1000).toLocaleString('pt-BR')));
