@@ -224,6 +224,8 @@ def slot(s, data, prefix=''):
 
 def act(s, data):
     name = data.get('action')
+    if name in ('daily', 'claim', 'mission', 'crate'):
+        raise ValueError('Ação desativada.')
     message = 'Operação concluída.'
     if name == 'convert_btc_balance':
         cfg = btc.config()

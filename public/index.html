@@ -510,7 +510,7 @@ button:enabled:hover{filter:brightness(1.14)}
 
 
 
-<button onclick="showTab('missions',this)">Missões</button>
+
 
 
 
@@ -601,43 +601,7 @@ button:enabled:hover{filter:brightness(1.14)}
     </form>
   </dialog>
 </div>
-<div class="card room-missions">
-
-
-
-<h2>Missões</h2>
-
-
-
-<div id="roomMissionSummary" role="region" aria-label="Progresso das missões" tabindex="0"></div><div class="mission-actions"><button type="button" onclick="openTimedMissions()">Ver missões</button></div>
-
-
-
-<dialog id="timedMissionDialog" aria-labelledby="timedMissionTitle">
-
-
-
-  <h2 id="timedMissionTitle">Missões</h2><h3>Diárias</h3>
-
-
-
-  <div id="dailyMissions"></div>
-
-
-
-  <h3>Semanais</h3><div id="weeklyMissions"></div>
-
-
-
-  <form method="dialog" class="mission-close"><button class="secondary" aria-label="Fechar janela de missões">×</button></form>
-
-
-
-</dialog>
-
-
-
-</div></div>
+</div>
 
 
 
@@ -686,7 +650,7 @@ button:enabled:hover{filter:brightness(1.14)}
       <button type="button" data-category="racks" onclick="filterMarket('racks')">Racks</button>
 
 
-      <button type="button" data-category="crates" onclick="filterMarket('crates')">Caixas</button>
+      
 
     </div>
 
@@ -711,7 +675,7 @@ button:enabled:hover{filter:brightness(1.14)}
 
 
 
-<section hidden="" id="tab-missions"><div class="card"><h2>Missões e conquistas</h2><div class="grid" id="missions"></div></div></section>
+
 
 
 
@@ -727,11 +691,11 @@ button:enabled:hover{filter:brightness(1.14)}
 
 
 
-<section hidden="" id="tab-daily"><div class="card"><h2>Recompensas diárias</h2><p class="hint">Um resgate por dia no horário do dispositivo. Sequência de dias aumenta o bônus.</p><div class="stats"><div class="stat"><small>Sequência</small><b id="dailyStreak"></b></div><div class="stat"><small>Recompensa</small><b id="dailyReward"></b></div></div><p id="dailyStatus"></p><button id="dailyButton" onclick="claimDaily()">Resgatar</button></div></section>
 
 
 
-<section hidden="" id="tab-crates"><div class="card"><button onclick="showTab('shop')">Voltar à Loja</button><h2>Caixas de equipamentos</h2><p class="hint">Prêmios aleatórios com probabilidades exibidas. As máquinas vão para o estoque.</p><div class="grid"><div class="crate"><h3>Caixa Básica</h3><p>250 DCK</p><p class="hint">Inclui uma máquina Basic.</p><button onclick="openCrate(false)">Abrir</button></div><div class="crate"><h3>Caixa Premium</h3><p>2.000 DCK</p><p class="hint">Inclui uma máquina Basic. Chances maiores de modelos mais potentes.</p><button onclick="openCrate(true)">Abrir</button></div></div><div class="mission" id="crateResult" style="margin-top:12px">Nenhuma caixa aberta nesta sessão.</div></div></section>
+
+
 
 
 
@@ -981,7 +945,7 @@ const models=[
 
 
 
-const legendaryModels=[{name:"Duck Prisma",power:15,cost:29.99,watts:900,icon:"",rarity:"Basic"},{name:"Duck Titã",power:20,cost:39.99,watts:1450,icon:"",rarity:"Basic"},{name:"Duck Fênix",power:16000,cost:42.0480,watts:2100,icon:"",rarity:"Basic"}];
+const legendaryModels=[{name:"Duck Prisma",power:15,cost:29.99,watts:900,icon:"",rarity:"Basic"},{name:"Duck Titã",power:20,cost:39.99,watts:1450,icon:"",rarity:"Basic"}];
 
 
 
@@ -1087,7 +1051,7 @@ function showTab(name){
 
 
 
-  if (name === "missions") renderTimedMissions();
+
 
 
 
@@ -1884,7 +1848,7 @@ function openTimedMissions(){
 
 
 
-  renderTimedMissions();
+
 
 
 
@@ -2079,16 +2043,6 @@ function renderMarket(){
       price:basePrice, action:`expandRoom(${size})`,
       button:limit ? 'Limite atingido' : 'Comprar rack', disabled:limit
     }));
-  } else {
-
-    products = [
-
-      {name:'Caixa Básica',rarity:'Caixa',kind:'crate',details:'Inclui uma máquina Basic.',price:250,action:'openCrate(false)',button:'Abrir caixa'},
-
-      {name:'Caixa Premium',rarity:'Premium',kind:'crate',details:'Inclui uma máquina Basic. Chances maiores de modelos mais potentes.',price:2000,action:'openCrate(true)',button:'Abrir caixa'}
-
-    ];
-
   }
 
   const cards = products.map(marketCard).join('') || '<p>Nenhum produto desta raridade.</p>';
@@ -2134,7 +2088,7 @@ function render(){
 
 
 
-  renderTimedMissions();
+
 
 
 
@@ -2286,7 +2240,7 @@ let defs=[["Primeira máquina",allMachines().length>=1,300],["Pequena fazenda",a
 
 
 
-$("missions").innerHTML=defs.map(([name,ok,reward],i)=>`<div class="mission"><b>${ok?"Concluída · ":""} ${name}</b><p class="muted">Recompensa: ${lmt(reward)}</p><button ${!ok||game.claimed.includes(i)?"disabled":""} onclick="claim(${i},${reward})">${game.claimed.includes(i)?"Resgatada":ok?"Resgatar":"Em andamento"}</button></div>`).join("");
+
 
 
 
@@ -2415,7 +2369,7 @@ function claimDaily(){if(game.dailyLast===localDay())return alert('Já resgatou 
 
 
 
-function openCrate(premium){let cost=premium?2000:250;if(game.balance<cost)return alert('Saldo insuficiente.');let weights=premium?[30,45,20,5]:[75,20,4,1],roll=Math.random()*100,idx=0;while(idx<3&&roll>=weights[idx]){roll-=weights[idx];idx++}let rarity=['Comum','Rara','Épica','Lendária'][idx],pool=idx===3?[legendaryModels[2]]:idx===2?[legendaryModels[1]]:idx===1?[models[2],models[3],legendaryModels[0]]:models;let base=pool[Math.floor(Math.random()*pool.length)],m={...base,id:Date.now()+Math.random(),rarity,level:0,baseCost:base.cost};game.balance-=cost;game.inventory.push(m);game.crateCount++;countMission("crate");$("crateResult").textContent=`${m.name} — ${rarity} — ${formatPower(m.power)}. Enviada ao estoque!`;addEvent('Caixa: '+m.name+' ('+rarity+')');render();save();showPurchase(premium ? "Caixa Premium" : "Caixa Básica", cost)}
+
 
 
 

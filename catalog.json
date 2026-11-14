@@ -46,13 +46,5 @@
     "watts": 1450,
     "icon": "🛡️",
     "rarity": "Basic"
-  },
-  {
-    "name": "Duck Fênix",
-    "power": 16000,
-    "cost": 42.048,
-    "watts": 2100,
-    "icon": "🔥",
-    "rarity": "Basic"
   }
 ]
